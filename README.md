@@ -34,9 +34,9 @@ The initial algorithm should be a scoring engine:
 
 ## Current Status
 
-The project has a Next.js web scaffold under `apps/web`. Backend, database, and scheduling engine are not implemented yet.
+The project has a Next.js web app under `apps/web` with the first local core scheduling flow. Users can define an event request, calculate ranked slot suggestions from the scheduling engine, and accept a suggestion into local calendar state.
 
-Recommended next step: build the first framework-independent scheduling engine slice with tests.
+Recommended next step: decide whether to add room/resource constraints or persistence first.
 
 ## Development
 

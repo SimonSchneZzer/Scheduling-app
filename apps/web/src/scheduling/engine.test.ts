@@ -128,6 +128,43 @@ describe("generateScheduleSuggestions", () => {
     expect(suggestions[0]?.start).toEqual(date("2026-06-08T09:30:00.000Z"));
   });
 
+  it("keeps a slot valid when an optional participant has an existing conflict but lowers its score", () => {
+    const noConflict = generateScheduleSuggestions({
+      eventRequest: baseEventRequest,
+      participantAvailability: fullyAvailable,
+      existingEvents: [],
+      maxSuggestions: 2,
+    });
+    const optionalConflict = generateScheduleSuggestions({
+      eventRequest: baseEventRequest,
+      participantAvailability: fullyAvailable,
+      existingEvents: [
+        {
+          id: "optional-conflict",
+          participantIds: ["optional-1"],
+          start: date("2026-06-08T09:00:00.000Z"),
+          end: date("2026-06-08T09:30:00.000Z"),
+        },
+      ],
+      maxSuggestions: 2,
+    });
+    const noConflictFirstSlot = noConflict.find(
+      (suggestion) =>
+        suggestion.start.getTime() ===
+        date("2026-06-08T09:00:00.000Z").getTime(),
+    );
+    const optionalConflictFirstSlot = optionalConflict.find(
+      (suggestion) =>
+        suggestion.start.getTime() ===
+        date("2026-06-08T09:00:00.000Z").getTime(),
+    );
+
+    expect(optionalConflictFirstSlot).toBeDefined();
+    expect(noConflictFirstSlot!.score).toBeGreaterThan(
+      optionalConflictFirstSlot!.score,
+    );
+  });
+
   it("sorts suggestions by score first and start time second", () => {
     const suggestions = generateScheduleSuggestions({
       eventRequest: baseEventRequest,

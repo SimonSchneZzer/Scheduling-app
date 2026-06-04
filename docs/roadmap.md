@@ -75,13 +75,20 @@ Completed first slice:
 
 ## Phase 4: Calendar UI MVP
 
-Status: planned
+Status: in progress
 
 - Show team calendar.
 - Create event request form.
 - Select required and optional participants.
 - Show scheduling suggestions.
 - Accept a suggestion into the calendar.
+
+Completed first slice:
+- Event request form for title, duration, priority, date, time window, and participant roles.
+- Mock team availability and initial calendar events.
+- UI calls the scheduling engine directly.
+- Ranked suggestions are shown with explanations.
+- Accepted suggestions are added to local calendar state.
 
 ## Phase 5: Resources And Long Events
 

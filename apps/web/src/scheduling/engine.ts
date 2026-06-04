@@ -77,20 +77,19 @@ function evaluateSlot(
   );
 
   if (
-    requiredParticipants.some(
-      (participant) =>
-        !isParticipantAvailable(participant, slot, participantAvailability),
-    )
+    requiredParticipants.some((participant) => {
+      return (
+        !isParticipantAvailable(participant, slot, participantAvailability) ||
+        hasParticipantEventConflict(slot, participant, existingEvents)
+      );
+    })
   ) {
     return null;
   }
 
-  if (hasExistingEventConflict(slot, eventRequest.participants, existingEvents)) {
-    return null;
-  }
-
   const availableOptionalCount = optionalParticipants.filter((participant) =>
-    isParticipantAvailable(participant, slot, participantAvailability),
+    isParticipantAvailable(participant, slot, participantAvailability) &&
+    !hasParticipantEventConflict(slot, participant, existingEvents),
   ).length;
   const optionalScore =
     optionalParticipants.length === 0
@@ -131,17 +130,13 @@ function isParticipantAvailable(
   );
 }
 
-function hasExistingEventConflict(
+function hasParticipantEventConflict(
   slot: TimeWindow,
-  participants: Participant[],
+  participant: Participant,
   existingEvents: CalendarEvent[],
 ) {
-  const participantIds = new Set(participants.map((participant) => participant.id));
-
   return existingEvents.some((event) => {
-    const sharesParticipant = event.participantIds.some((participantId) =>
-      participantIds.has(participantId),
-    );
+    const sharesParticipant = event.participantIds.includes(participant.id);
 
     return sharesParticipant && windowsOverlap(slot, event);
   });
