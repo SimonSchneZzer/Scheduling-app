@@ -22,8 +22,7 @@ export const participantAvailability: ParticipantAvailability[] = [
   {
     participantId: "mara",
     windows: [
-      window("2026-06-08T09:00:00", "2026-06-08T12:00:00"),
-      window("2026-06-08T13:00:00", "2026-06-08T17:00:00"),
+      window("2026-06-08T00:00:00", "2026-06-12T00:00:00"),
     ],
   },
   {
@@ -31,17 +30,19 @@ export const participantAvailability: ParticipantAvailability[] = [
     windows: [
       window("2026-06-08T09:30:00", "2026-06-08T12:00:00"),
       window("2026-06-08T13:30:00", "2026-06-08T16:30:00"),
+      window("2026-06-09T00:00:00", "2026-06-12T00:00:00"),
     ],
   },
   {
     participantId: "lea",
-    windows: [window("2026-06-08T10:00:00", "2026-06-08T15:00:00")],
+    windows: [window("2026-06-08T10:00:00", "2026-06-11T00:00:00")],
   },
   {
     participantId: "jonas",
     windows: [
       window("2026-06-08T09:00:00", "2026-06-08T11:30:00"),
       window("2026-06-08T14:00:00", "2026-06-08T17:00:00"),
+      window("2026-06-09T00:00:00", "2026-06-12T00:00:00"),
     ],
   },
 ];
@@ -55,6 +56,7 @@ export const rooms: RoomResource[] = [
     availability: [
       window("2026-06-08T09:00:00", "2026-06-08T12:00:00"),
       window("2026-06-08T13:00:00", "2026-06-08T17:00:00"),
+      window("2026-06-09T00:00:00", "2026-06-12T00:00:00"),
     ],
   },
   {
@@ -62,14 +64,14 @@ export const rooms: RoomResource[] = [
     name: "Room B",
     capacity: 4,
     features: ["screen", "video"],
-    availability: [window("2026-06-08T09:00:00", "2026-06-08T17:00:00")],
+    availability: [window("2026-06-08T09:00:00", "2026-06-12T00:00:00")],
   },
   {
     id: "workshop-room",
     name: "Workshop Room",
     capacity: 14,
     features: ["whiteboard", "screen", "video"],
-    availability: [window("2026-06-08T10:00:00", "2026-06-08T16:00:00")],
+    availability: [window("2026-06-08T10:00:00", "2026-06-12T00:00:00")],
   },
 ];
 

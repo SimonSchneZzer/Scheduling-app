@@ -51,6 +51,14 @@ export function generateScheduleSuggestions({
 }
 
 export function generateCandidateSlots(eventRequest: EventRequest): TimeWindow[] {
+  if (eventRequest.eventType === "all-day") {
+    return generateDaySlots(eventRequest, 1);
+  }
+
+  if (eventRequest.eventType === "multi-day") {
+    return generateDaySlots(eventRequest, eventRequest.durationDays ?? 1);
+  }
+
   const incrementMinutes =
     eventRequest.slotIncrementMinutes ?? DEFAULT_SLOT_INCREMENT_MINUTES;
   const durationMs = minutesToMs(eventRequest.durationMinutes);
@@ -66,6 +74,31 @@ export function generateCandidateSlots(eventRequest: EventRequest): TimeWindow[]
       start: new Date(startMs),
       end: new Date(startMs + durationMs),
     });
+  }
+
+  return candidates;
+}
+
+function generateDaySlots(
+  eventRequest: EventRequest,
+  durationDays: number,
+): TimeWindow[] {
+  const normalizedDurationDays = Math.max(1, Math.floor(durationDays));
+  const candidates: TimeWindow[] = [];
+  let cursor = startOfDay(eventRequest.searchWindow.start);
+  const searchEnd = startOfDay(eventRequest.searchWindow.end);
+
+  while (cursor <= searchEnd) {
+    const end = addDays(cursor, normalizedDurationDays);
+
+    if (end <= addDays(searchEnd, 1)) {
+      candidates.push({
+        start: cursor,
+        end,
+      });
+    }
+
+    cursor = addDays(cursor, 1);
   }
 
   return candidates;
@@ -222,4 +255,14 @@ function windowsOverlap(a: TimeWindow, b: TimeWindow) {
 
 function minutesToMs(minutes: number) {
   return minutes * 60 * 1000;
+}
+
+function startOfDay(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function addDays(date: Date, days: number) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
 }

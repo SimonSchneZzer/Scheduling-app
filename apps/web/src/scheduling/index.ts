@@ -8,6 +8,7 @@ export type {
   CalendarEventSource,
   EventRequest,
   EventMode,
+  EventType,
   GenerateScheduleSuggestionsInput,
   Participant,
   ParticipantAvailability,

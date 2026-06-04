@@ -34,7 +34,7 @@ The initial algorithm should be a scoring engine:
 
 ## Current Status
 
-The project has a Next.js web app under `apps/web` with the first local core scheduling flow. Users can define an event request, calculate ranked slot suggestions from the scheduling engine, include room constraints for offline events, and accept a suggestion into local calendar state. Accepted events persist in browser local storage for the demo.
+The project has a Next.js web app under `apps/web` with the first local core scheduling flow. Users can define timed, all-day, or multi-day event requests, calculate ranked slot suggestions from the scheduling engine, include room constraints for offline events, and accept a suggestion into local calendar state. Accepted events persist in browser local storage for the demo.
 
 Recommended next step: decide whether to add database persistence or all-day/multi-day scheduling first.
 

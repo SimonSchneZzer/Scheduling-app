@@ -14,6 +14,7 @@ const baseSearchWindow = {
 
 const baseEventRequest: EventRequest = {
   id: "event-request-1",
+  eventType: "timed",
   durationMinutes: 30,
   priority: "medium",
   resourceRequirements: {
@@ -326,6 +327,215 @@ describe("generateScheduleSuggestions", () => {
     });
 
     expect(suggestions).toHaveLength(0);
+  });
+
+  it("generates all-day candidates as whole-day slots", () => {
+    const suggestions = generateScheduleSuggestions({
+      eventRequest: {
+        ...baseEventRequest,
+        eventType: "all-day",
+        searchWindow: {
+          start: date("2026-06-08T09:00:00.000Z"),
+          end: date("2026-06-09T17:00:00.000Z"),
+        },
+      },
+      participantAvailability: [
+        {
+          participantId: "required-1",
+          windows: [
+            {
+              start: date("2026-06-08T00:00:00"),
+              end: date("2026-06-10T00:00:00"),
+            },
+          ],
+        },
+        {
+          participantId: "optional-1",
+          windows: [
+            {
+              start: date("2026-06-08T00:00:00"),
+              end: date("2026-06-10T00:00:00"),
+            },
+          ],
+        },
+      ],
+      existingEvents: [],
+      resources: [],
+    });
+
+    expect(suggestions).toHaveLength(2);
+    expect(suggestions[0]?.start).toEqual(date("2026-06-08T00:00:00"));
+    expect(suggestions[0]?.end).toEqual(date("2026-06-09T00:00:00"));
+    expect(suggestions[1]?.start).toEqual(date("2026-06-09T00:00:00"));
+    expect(suggestions[1]?.end).toEqual(date("2026-06-10T00:00:00"));
+  });
+
+  it("generates multi-day candidates as contiguous day blocks", () => {
+    const suggestions = generateScheduleSuggestions({
+      eventRequest: {
+        ...baseEventRequest,
+        eventType: "multi-day",
+        durationDays: 2,
+        searchWindow: {
+          start: date("2026-06-08T09:00:00.000Z"),
+          end: date("2026-06-10T17:00:00.000Z"),
+        },
+      },
+      participantAvailability: [
+        {
+          participantId: "required-1",
+          windows: [
+            {
+              start: date("2026-06-08T00:00:00"),
+              end: date("2026-06-11T00:00:00"),
+            },
+          ],
+        },
+        {
+          participantId: "optional-1",
+          windows: [
+            {
+              start: date("2026-06-08T00:00:00"),
+              end: date("2026-06-11T00:00:00"),
+            },
+          ],
+        },
+      ],
+      existingEvents: [],
+      resources: [],
+    });
+
+    expect(suggestions).toHaveLength(2);
+    expect(suggestions[0]?.start).toEqual(date("2026-06-08T00:00:00"));
+    expect(suggestions[0]?.end).toEqual(date("2026-06-10T00:00:00"));
+    expect(suggestions[1]?.start).toEqual(date("2026-06-09T00:00:00"));
+    expect(suggestions[1]?.end).toEqual(date("2026-06-11T00:00:00"));
+  });
+
+  it("filters out all-day candidates when a required participant has a conflict that day", () => {
+    const suggestions = generateScheduleSuggestions({
+      eventRequest: {
+        ...baseEventRequest,
+        eventType: "all-day",
+        searchWindow: {
+          start: date("2026-06-08T09:00:00.000Z"),
+          end: date("2026-06-09T17:00:00.000Z"),
+        },
+      },
+      participantAvailability: [
+        {
+          participantId: "required-1",
+          windows: [
+            {
+              start: date("2026-06-08T00:00:00"),
+              end: date("2026-06-10T00:00:00"),
+            },
+          ],
+        },
+        {
+          participantId: "optional-1",
+          windows: [
+            {
+              start: date("2026-06-08T00:00:00"),
+              end: date("2026-06-10T00:00:00"),
+            },
+          ],
+        },
+      ],
+      existingEvents: [
+        {
+          id: "required-day-conflict",
+          title: "Required conflict",
+          source: "seed",
+          participantIds: ["required-1"],
+          start: date("2026-06-08T13:00:00.000Z"),
+          end: date("2026-06-08T14:00:00.000Z"),
+        },
+      ],
+      resources: [],
+    });
+
+    expect(suggestions).toHaveLength(1);
+    expect(suggestions[0]?.start).toEqual(date("2026-06-09T00:00:00"));
+  });
+
+  it("keeps all-day candidates valid when optional participants conflict but lowers score", () => {
+    const noConflict = generateScheduleSuggestions({
+      eventRequest: {
+        ...baseEventRequest,
+        eventType: "all-day",
+        searchWindow: {
+          start: date("2026-06-08T09:00:00.000Z"),
+          end: date("2026-06-08T17:00:00.000Z"),
+        },
+      },
+      participantAvailability: [
+        {
+          participantId: "required-1",
+          windows: [
+            {
+              start: date("2026-06-08T00:00:00"),
+              end: date("2026-06-09T00:00:00"),
+            },
+          ],
+        },
+        {
+          participantId: "optional-1",
+          windows: [
+            {
+              start: date("2026-06-08T00:00:00"),
+              end: date("2026-06-09T00:00:00"),
+            },
+          ],
+        },
+      ],
+      existingEvents: [],
+      resources: [],
+    });
+    const optionalConflict = generateScheduleSuggestions({
+      eventRequest: {
+        ...baseEventRequest,
+        eventType: "all-day",
+        searchWindow: {
+          start: date("2026-06-08T09:00:00.000Z"),
+          end: date("2026-06-08T17:00:00.000Z"),
+        },
+      },
+      participantAvailability: [
+        {
+          participantId: "required-1",
+          windows: [
+            {
+              start: date("2026-06-08T00:00:00"),
+              end: date("2026-06-09T00:00:00"),
+            },
+          ],
+        },
+        {
+          participantId: "optional-1",
+          windows: [
+            {
+              start: date("2026-06-08T00:00:00"),
+              end: date("2026-06-09T00:00:00"),
+            },
+          ],
+        },
+      ],
+      existingEvents: [
+        {
+          id: "optional-day-conflict",
+          title: "Optional conflict",
+          source: "seed",
+          participantIds: ["optional-1"],
+          start: date("2026-06-08T13:00:00.000Z"),
+          end: date("2026-06-08T14:00:00.000Z"),
+        },
+      ],
+      resources: [],
+    });
+
+    expect(optionalConflict).toHaveLength(1);
+    expect(noConflict[0]!.score).toBeGreaterThan(optionalConflict[0]!.score);
   });
 });
 

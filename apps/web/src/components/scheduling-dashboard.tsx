@@ -16,6 +16,7 @@ import type {
   CalendarEvent,
   EventMode,
   EventRequest,
+  EventType,
   Participant,
   ParticipantRole,
   Priority,
@@ -26,6 +27,7 @@ import type {
 type ParticipantSelection = Record<string, ParticipantRole | "none">;
 
 const acceptedEventsStorageKey = "scheduling-app.accepted-events";
+const eventTypeOptions: EventType[] = ["timed", "all-day", "multi-day"];
 const priorityOptions: Priority[] = ["low", "medium", "high", "urgent"];
 const featureOptions: ResourceFeature[] = ["whiteboard", "screen", "video"];
 
@@ -35,7 +37,9 @@ const initialSelection: ParticipantSelection = Object.fromEntries(
 
 export function SchedulingDashboard() {
   const [title, setTitle] = useState("Workshop planning slot");
+  const [eventType, setEventType] = useState<EventType>("timed");
   const [durationMinutes, setDurationMinutes] = useState(45);
+  const [durationDays, setDurationDays] = useState(2);
   const [priority, setPriority] = useState<Priority>("high");
   const [eventDate, setEventDate] = useState("2026-06-08");
   const [startTime, setStartTime] = useState("09:00");
@@ -95,7 +99,9 @@ export function SchedulingDashboard() {
   const eventRequest = useMemo<EventRequest>(() => {
     return {
       id: "draft-event-request",
+      eventType,
       durationMinutes,
+      durationDays,
       priority,
       resourceRequirements: {
         mode: eventMode,
@@ -105,15 +111,20 @@ export function SchedulingDashboard() {
       participants: selectedParticipants,
       searchWindow: {
         start: toDate(eventDate, startTime),
-        end: toDate(eventDate, endTime),
+        end:
+          eventType === "timed"
+            ? toDate(eventDate, endTime)
+            : toDate(addDaysToDateInput(eventDate, 3), endTime),
       },
       slotIncrementMinutes: 15,
     };
   }, [
     durationMinutes,
+    durationDays,
     endTime,
     eventDate,
     eventMode,
+    eventType,
     priority,
     requiredFeatures,
     requiredSeats,
@@ -241,21 +252,59 @@ export function SchedulingDashboard() {
 
             <div className="grid grid-cols-2 gap-3">
               <label className="grid gap-1 text-sm">
-                <span className="font-medium text-[#3c4656]">Duration</span>
+                <span className="font-medium text-[#3c4656]">Event type</span>
                 <select
-                  className="h-10 rounded-md border border-[#cfd6e0] px-3"
-                  onChange={(event) =>
-                    setDurationMinutes(Number(event.target.value))
-                  }
-                  value={durationMinutes}
+                  className="h-10 rounded-md border border-[#cfd6e0] px-3 capitalize"
+                  onChange={(event) => setEventType(event.target.value as EventType)}
+                  value={eventType}
                 >
-                  <option value={30}>30 min</option>
-                  <option value={45}>45 min</option>
-                  <option value={60}>60 min</option>
-                  <option value={90}>90 min</option>
+                  {eventTypeOptions.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
                 </select>
               </label>
 
+              <label className="grid gap-1 text-sm">
+                <span className="font-medium text-[#3c4656]">
+                  {eventType === "multi-day" ? "Duration days" : "Duration"}
+                </span>
+                {eventType === "multi-day" ? (
+                  <input
+                    className="h-10 rounded-md border border-[#cfd6e0] px-3"
+                    min={2}
+                    onChange={(event) =>
+                      setDurationDays(Number(event.target.value))
+                    }
+                    type="number"
+                    value={durationDays}
+                  />
+                ) : (
+                  <select
+                    className="h-10 rounded-md border border-[#cfd6e0] px-3"
+                    disabled={eventType === "all-day"}
+                    onChange={(event) =>
+                      setDurationMinutes(Number(event.target.value))
+                    }
+                    value={durationMinutes}
+                  >
+                    {eventType === "all-day" ? (
+                      <option value={1440}>1 day</option>
+                    ) : (
+                      <>
+                        <option value={30}>30 min</option>
+                        <option value={45}>45 min</option>
+                        <option value={60}>60 min</option>
+                        <option value={90}>90 min</option>
+                      </>
+                    )}
+                  </select>
+                )}
+              </label>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
               <label className="grid gap-1 text-sm">
                 <span className="font-medium text-[#3c4656]">Priority</span>
                 <select
@@ -270,6 +319,15 @@ export function SchedulingDashboard() {
                   ))}
                 </select>
               </label>
+
+              <div className="rounded-md border border-[#d9dee7] px-3 py-2 text-sm">
+                <p className="font-medium text-[#3c4656]">Search range</p>
+                <p className="text-[#687385]">
+                  {eventType === "timed"
+                    ? "Same day"
+                    : "Next 4 calendar days"}
+                </p>
+              </div>
             </div>
 
             <div className="grid grid-cols-[1fr_96px_96px] gap-3">
@@ -282,19 +340,33 @@ export function SchedulingDashboard() {
                   value={eventDate}
                 />
               </label>
-              <label className="grid gap-1 text-sm">
+              <label
+                className={
+                  eventType === "timed"
+                    ? "grid gap-1 text-sm"
+                    : "grid gap-1 text-sm opacity-50"
+                }
+              >
                 <span className="font-medium text-[#3c4656]">From</span>
                 <input
                   className="h-10 rounded-md border border-[#cfd6e0] px-2"
+                  disabled={eventType !== "timed"}
                   onChange={(event) => setStartTime(event.target.value)}
                   type="time"
                   value={startTime}
                 />
               </label>
-              <label className="grid gap-1 text-sm">
+              <label
+                className={
+                  eventType === "timed"
+                    ? "grid gap-1 text-sm"
+                    : "grid gap-1 text-sm opacity-50"
+                }
+              >
                 <span className="font-medium text-[#3c4656]">To</span>
                 <input
                   className="h-10 rounded-md border border-[#cfd6e0] px-2"
+                  disabled={eventType !== "timed"}
                   onChange={(event) => setEndTime(event.target.value)}
                   type="time"
                   value={endTime}
@@ -437,7 +509,11 @@ export function SchedulingDashboard() {
                   >
                     <div>
                       <p className="font-semibold">
-                        {formatTimeRange(suggestion.start, suggestion.end)}
+                        {formatSuggestionRange(
+                          suggestion.start,
+                          suggestion.end,
+                          eventType,
+                        )}
                       </p>
                       <p className="text-sm text-[#687385]">
                         {formatDate(suggestion.start)}
@@ -507,6 +583,11 @@ export function SchedulingDashboard() {
                       <p className="text-sm text-[#687385]">
                         {formatDate(event.start)}
                       </p>
+                      {isWholeDayRange(event.start, event.end) ? (
+                        <p className="text-xs text-[#687385]">
+                          {formatDateRange(event.start, event.end)}
+                        </p>
+                      ) : null}
                     </div>
                     <div>
                       <div className="mb-1 flex flex-wrap items-center gap-2">
@@ -545,6 +626,7 @@ export function SchedulingDashboard() {
                 <li>Offline events need a fitting available room.</li>
                 <li>Online events relax physical room constraints.</li>
                 <li>Accepted events persist in local browser storage.</li>
+                <li>All-day and multi-day events use whole-day candidates.</li>
               </ul>
             </div>
           </div>
@@ -556,6 +638,16 @@ export function SchedulingDashboard() {
 
 function toDate(date: string, time: string) {
   return new Date(`${date}T${time}:00`);
+}
+
+function addDaysToDateInput(date: string, days: number) {
+  const value = new Date(`${date}T00:00:00`);
+  value.setDate(value.getDate() + days);
+  return [
+    value.getFullYear(),
+    String(value.getMonth() + 1).padStart(2, "0"),
+    String(value.getDate()).padStart(2, "0"),
+  ].join("-");
 }
 
 function formatDate(date: Date) {
@@ -573,6 +665,34 @@ function formatTimeRange(start: Date, end: Date) {
   });
 
   return `${formatter.format(start)}-${formatter.format(end)}`;
+}
+
+function formatSuggestionRange(start: Date, end: Date, eventType: EventType) {
+  if (eventType === "timed") {
+    return formatTimeRange(start, end);
+  }
+
+  return formatDateRange(start, end);
+}
+
+function formatDateRange(start: Date, end: Date) {
+  const exclusiveEnd = new Date(end);
+  exclusiveEnd.setDate(exclusiveEnd.getDate() - 1);
+
+  if (start.toDateString() === exclusiveEnd.toDateString()) {
+    return formatDate(start);
+  }
+
+  return `${formatDate(start)}-${formatDate(exclusiveEnd)}`;
+}
+
+function isWholeDayRange(start: Date, end: Date) {
+  return (
+    start.getHours() === 0 &&
+    start.getMinutes() === 0 &&
+    end.getHours() === 0 &&
+    end.getMinutes() === 0
+  );
 }
 
 function formatParticipantNames(participantIds: string[]) {

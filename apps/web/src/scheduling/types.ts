@@ -4,6 +4,8 @@ export type Priority = "low" | "medium" | "high" | "urgent";
 
 export type EventMode = "offline" | "online";
 
+export type EventType = "timed" | "all-day" | "multi-day";
+
 export type ResourceFeature = "whiteboard" | "screen" | "video";
 
 export type CalendarEventSource = "seed" | "accepted";
@@ -49,7 +51,9 @@ export type ResourceRequirements = {
 
 export type EventRequest = {
   id: string;
+  eventType: EventType;
   durationMinutes: number;
+  durationDays?: number;
   priority: Priority;
   resourceRequirements: ResourceRequirements;
   participants: Participant[];

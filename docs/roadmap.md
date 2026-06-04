@@ -111,3 +111,9 @@ Completed first resource slice:
 - Online event requests relax room constraints.
 - Suggestions include the assigned room.
 - Accepted suggestions store local room bookings.
+
+Completed first long-event slice:
+- Event requests support timed, all-day, and multi-day types.
+- All-day requests generate whole-day candidates.
+- Multi-day requests generate contiguous day-block candidates.
+- UI displays date ranges for whole-day suggestions.
