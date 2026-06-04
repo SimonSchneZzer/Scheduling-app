@@ -4,6 +4,7 @@ import type {
   CalendarEvent,
   EventRequest,
   ParticipantAvailability,
+  RoomResource,
 } from "./types";
 
 const baseSearchWindow = {
@@ -15,6 +16,11 @@ const baseEventRequest: EventRequest = {
   id: "event-request-1",
   durationMinutes: 30,
   priority: "medium",
+  resourceRequirements: {
+    mode: "online",
+    seats: 0,
+    features: [],
+  },
   slotIncrementMinutes: 30,
   searchWindow: baseSearchWindow,
   participants: [
@@ -33,6 +39,14 @@ const fullyAvailable: ParticipantAvailability[] = [
     windows: [baseSearchWindow],
   },
 ];
+
+const baseRoom: RoomResource = {
+  id: "room-a",
+  name: "Room A",
+  capacity: 8,
+  features: ["whiteboard", "screen"],
+  availability: [baseSearchWindow],
+};
 
 describe("generateScheduleSuggestions", () => {
   it("filters out slots where a required participant is unavailable", () => {
@@ -54,6 +68,7 @@ describe("generateScheduleSuggestions", () => {
         },
       ],
       existingEvents: [],
+      resources: [],
     });
 
     expect(suggestions).toHaveLength(1);
@@ -65,6 +80,7 @@ describe("generateScheduleSuggestions", () => {
       eventRequest: baseEventRequest,
       participantAvailability: fullyAvailable,
       existingEvents: [],
+      resources: [],
       maxSuggestions: 1,
     });
     const withoutOptional = generateScheduleSuggestions({
@@ -80,6 +96,7 @@ describe("generateScheduleSuggestions", () => {
         },
       ],
       existingEvents: [],
+      resources: [],
       maxSuggestions: 1,
     });
 
@@ -96,12 +113,14 @@ describe("generateScheduleSuggestions", () => {
       eventRequest: { ...baseEventRequest, priority: "low" },
       participantAvailability: fullyAvailable,
       existingEvents: [],
+      resources: [],
       maxSuggestions: 1,
     });
     const urgentPriority = generateScheduleSuggestions({
       eventRequest: { ...baseEventRequest, priority: "urgent" },
       participantAvailability: fullyAvailable,
       existingEvents: [],
+      resources: [],
       maxSuggestions: 1,
     });
 
@@ -122,6 +141,7 @@ describe("generateScheduleSuggestions", () => {
       eventRequest: baseEventRequest,
       participantAvailability: fullyAvailable,
       existingEvents,
+      resources: [],
     });
 
     expect(suggestions).toHaveLength(1);
@@ -133,6 +153,7 @@ describe("generateScheduleSuggestions", () => {
       eventRequest: baseEventRequest,
       participantAvailability: fullyAvailable,
       existingEvents: [],
+      resources: [],
       maxSuggestions: 2,
     });
     const optionalConflict = generateScheduleSuggestions({
@@ -146,6 +167,7 @@ describe("generateScheduleSuggestions", () => {
           end: date("2026-06-08T09:30:00.000Z"),
         },
       ],
+      resources: [],
       maxSuggestions: 2,
     });
     const noConflictFirstSlot = noConflict.find(
@@ -184,11 +206,120 @@ describe("generateScheduleSuggestions", () => {
         },
       ],
       existingEvents: [],
+      resources: [],
     });
 
     expect(suggestions).toHaveLength(2);
     expect(suggestions[0]?.start).toEqual(date("2026-06-08T09:30:00.000Z"));
     expect(suggestions[0]!.score).toBeGreaterThan(suggestions[1]!.score);
+  });
+
+  it("filters out offline slots when no room has enough seats", () => {
+    const suggestions = generateScheduleSuggestions({
+      eventRequest: {
+        ...baseEventRequest,
+        resourceRequirements: {
+          mode: "offline",
+          seats: 10,
+          features: [],
+        },
+      },
+      participantAvailability: fullyAvailable,
+      existingEvents: [],
+      resources: [baseRoom],
+    });
+
+    expect(suggestions).toHaveLength(0);
+  });
+
+  it("filters out offline slots when no room has a required feature", () => {
+    const suggestions = generateScheduleSuggestions({
+      eventRequest: {
+        ...baseEventRequest,
+        resourceRequirements: {
+          mode: "offline",
+          seats: 4,
+          features: ["video"],
+        },
+      },
+      participantAvailability: fullyAvailable,
+      existingEvents: [],
+      resources: [baseRoom],
+    });
+
+    expect(suggestions).toHaveLength(0);
+  });
+
+  it("ignores room constraints for online events", () => {
+    const suggestions = generateScheduleSuggestions({
+      eventRequest: {
+        ...baseEventRequest,
+        resourceRequirements: {
+          mode: "online",
+          seats: 99,
+          features: ["video"],
+        },
+      },
+      participantAvailability: fullyAvailable,
+      existingEvents: [],
+      resources: [],
+      maxSuggestions: 1,
+    });
+
+    expect(suggestions).toHaveLength(1);
+    expect(suggestions[0]?.assignedResource).toBeUndefined();
+    expect(suggestions[0]?.explanations).toContain(
+      "online event relaxes room constraints",
+    );
+  });
+
+  it("returns the fitting room for offline events", () => {
+    const suggestions = generateScheduleSuggestions({
+      eventRequest: {
+        ...baseEventRequest,
+        resourceRequirements: {
+          mode: "offline",
+          seats: 6,
+          features: ["whiteboard"],
+        },
+      },
+      participantAvailability: fullyAvailable,
+      existingEvents: [],
+      resources: [baseRoom],
+      maxSuggestions: 1,
+    });
+
+    expect(suggestions).toHaveLength(1);
+    expect(suggestions[0]?.assignedResource?.id).toBe("room-a");
+    expect(suggestions[0]?.explanations).toContain(
+      "Room A fits room constraints",
+    );
+  });
+
+  it("filters out rooms already booked for the candidate slot", () => {
+    const suggestions = generateScheduleSuggestions({
+      eventRequest: {
+        ...baseEventRequest,
+        resourceRequirements: {
+          mode: "offline",
+          seats: 6,
+          features: ["whiteboard"],
+        },
+      },
+      participantAvailability: fullyAvailable,
+      existingEvents: [
+        {
+          id: "room-booking",
+          participantIds: [],
+          resourceId: "room-a",
+          start: date("2026-06-08T09:00:00.000Z"),
+          end: date("2026-06-08T10:00:00.000Z"),
+        },
+      ],
+      resources: [baseRoom],
+    });
+
+    expect(suggestions).toHaveLength(0);
   });
 });
 

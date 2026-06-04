@@ -92,10 +92,17 @@ Completed first slice:
 
 ## Phase 5: Resources And Long Events
 
-Status: planned
+Status: in progress
 
 - Add rooms.
 - Add room capacity and features.
 - Add devices/resources.
 - Add online/offline mode.
 - Support all-day and multi-day event planning.
+
+Completed first resource slice:
+- Mock rooms with capacity, features, and availability.
+- Offline event requests require a fitting available room.
+- Online event requests relax room constraints.
+- Suggestions include the assigned room.
+- Accepted suggestions store local room bookings.

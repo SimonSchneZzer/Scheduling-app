@@ -2,6 +2,7 @@ import type {
   CalendarEvent,
   ParticipantAvailability,
   ParticipantRole,
+  RoomResource,
 } from "./types";
 
 export type TeamMember = {
@@ -45,10 +46,38 @@ export const participantAvailability: ParticipantAvailability[] = [
   },
 ];
 
+export const rooms: RoomResource[] = [
+  {
+    id: "room-a",
+    name: "Room A",
+    capacity: 8,
+    features: ["whiteboard", "screen"],
+    availability: [
+      window("2026-06-08T09:00:00", "2026-06-08T12:00:00"),
+      window("2026-06-08T13:00:00", "2026-06-08T17:00:00"),
+    ],
+  },
+  {
+    id: "room-b",
+    name: "Room B",
+    capacity: 4,
+    features: ["screen", "video"],
+    availability: [window("2026-06-08T09:00:00", "2026-06-08T17:00:00")],
+  },
+  {
+    id: "workshop-room",
+    name: "Workshop Room",
+    capacity: 14,
+    features: ["whiteboard", "screen", "video"],
+    availability: [window("2026-06-08T10:00:00", "2026-06-08T16:00:00")],
+  },
+];
+
 export const initialCalendarEvents: CalendarEvent[] = [
   {
     id: "calendar-standup",
     participantIds: ["mara", "simon", "lea", "jonas"],
+    resourceId: "room-a",
     start: new Date("2026-06-08T09:00:00"),
     end: new Date("2026-06-08T09:30:00"),
   },

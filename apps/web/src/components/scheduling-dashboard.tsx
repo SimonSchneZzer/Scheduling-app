@@ -4,21 +4,25 @@ import { useMemo, useState } from "react";
 import {
   initialCalendarEvents,
   participantAvailability,
+  rooms,
   teamMembers,
 } from "@/scheduling/mock-data";
 import { generateScheduleSuggestions } from "@/scheduling";
 import type {
   CalendarEvent,
+  EventMode,
   EventRequest,
   Participant,
   ParticipantRole,
   Priority,
+  ResourceFeature,
   ScheduleSuggestion,
 } from "@/scheduling";
 
 type ParticipantSelection = Record<string, ParticipantRole | "none">;
 
 const priorityOptions: Priority[] = ["low", "medium", "high", "urgent"];
+const featureOptions: ResourceFeature[] = ["whiteboard", "screen", "video"];
 
 const initialSelection: ParticipantSelection = Object.fromEntries(
   teamMembers.map((member) => [member.id, member.defaultRole]),
@@ -31,6 +35,12 @@ export function SchedulingDashboard() {
   const [eventDate, setEventDate] = useState("2026-06-08");
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("17:00");
+  const [eventMode, setEventMode] = useState<EventMode>("offline");
+  const [requiredSeats, setRequiredSeats] = useState(8);
+  const [requiredFeatures, setRequiredFeatures] = useState<ResourceFeature[]>([
+    "whiteboard",
+    "screen",
+  ]);
   const [participantSelection, setParticipantSelection] =
     useState<ParticipantSelection>(initialSelection);
   const [acceptedEvents, setAcceptedEvents] =
@@ -60,6 +70,11 @@ export function SchedulingDashboard() {
       id: "draft-event-request",
       durationMinutes,
       priority,
+      resourceRequirements: {
+        mode: eventMode,
+        seats: requiredSeats,
+        features: requiredFeatures,
+      },
       participants: selectedParticipants,
       searchWindow: {
         start: toDate(eventDate, startTime),
@@ -71,7 +86,10 @@ export function SchedulingDashboard() {
     durationMinutes,
     endTime,
     eventDate,
+    eventMode,
     priority,
+    requiredFeatures,
+    requiredSeats,
     selectedParticipants,
     startTime,
   ]);
@@ -88,6 +106,7 @@ export function SchedulingDashboard() {
       eventRequest,
       participantAvailability,
       existingEvents: acceptedEvents,
+      resources: rooms,
       maxSuggestions: 6,
     });
 
@@ -99,6 +118,7 @@ export function SchedulingDashboard() {
     const acceptedEvent: CalendarEvent = {
       id: `accepted-${acceptedEvents.length + 1}`,
       participantIds: selectedParticipants.map((participant) => participant.id),
+      resourceId: suggestion.assignedResource?.id,
       start: suggestion.start,
       end: suggestion.end,
     };
@@ -120,6 +140,16 @@ export function SchedulingDashboard() {
       ...current,
       [memberId]: role,
     }));
+  }
+
+  function toggleRequiredFeature(feature: ResourceFeature) {
+    setRequiredFeatures((current) => {
+      if (current.includes(feature)) {
+        return current.filter((item) => item !== feature);
+      }
+
+      return [...current, feature];
+    });
   }
 
   return (
@@ -149,8 +179,8 @@ export function SchedulingDashboard() {
                 Define the input for the scoring engine.
               </p>
             </div>
-            <span className="rounded-md bg-[#e8f3ee] px-2 py-1 text-xs font-semibold text-[#1f6f5b]">
-              Offline
+            <span className="rounded-md bg-[#e8f3ee] px-2 py-1 text-xs font-semibold capitalize text-[#1f6f5b]">
+              {eventMode}
             </span>
           </div>
 
@@ -229,6 +259,76 @@ export function SchedulingDashboard() {
 
             <div className="rounded-md border border-[#d9dee7] p-3">
               <div className="mb-3 flex items-center justify-between gap-3">
+                <p className="text-sm font-medium text-[#3c4656]">
+                  Room constraints
+                </p>
+                <select
+                  className="h-9 rounded-md border border-[#cfd6e0] bg-white px-2 text-sm capitalize"
+                  onChange={(event) =>
+                    setEventMode(event.target.value as EventMode)
+                  }
+                  value={eventMode}
+                >
+                  <option value="offline">Offline</option>
+                  <option value="online">Online</option>
+                </select>
+              </div>
+
+              <div
+                className={
+                  eventMode === "online"
+                    ? "grid gap-3 opacity-50"
+                    : "grid gap-3"
+                }
+              >
+                <label className="grid gap-1 text-sm">
+                  <span className="font-medium text-[#3c4656]">
+                    Required seats
+                  </span>
+                  <input
+                    className="h-10 rounded-md border border-[#cfd6e0] px-3"
+                    disabled={eventMode === "online"}
+                    min={1}
+                    onChange={(event) =>
+                      setRequiredSeats(Number(event.target.value))
+                    }
+                    type="number"
+                    value={requiredSeats}
+                  />
+                </label>
+
+                <div className="grid gap-2">
+                  <p className="text-sm font-medium text-[#3c4656]">
+                    Required features
+                  </p>
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    {featureOptions.map((feature) => (
+                      <label
+                        className="flex items-center gap-2 rounded-md bg-[#f6f7f9] px-3 py-2 text-sm capitalize"
+                        key={feature}
+                      >
+                        <input
+                          checked={requiredFeatures.includes(feature)}
+                          disabled={eventMode === "online"}
+                          onChange={() => toggleRequiredFeature(feature)}
+                          type="checkbox"
+                        />
+                        {feature}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {eventMode === "online" ? (
+                <p className="mt-3 text-xs text-[#687385]">
+                  Online events ignore physical room constraints.
+                </p>
+              ) : null}
+            </div>
+
+            <div className="rounded-md border border-[#d9dee7] p-3">
+              <div className="mb-3 flex items-center justify-between gap-3">
                 <p className="text-sm font-medium text-[#3c4656]">Participants</p>
                 <p className="text-xs text-[#687385]">
                   {requiredCount} required, {optionalCount} optional
@@ -287,7 +387,7 @@ export function SchedulingDashboard() {
               <div className="grid gap-3">
                 {suggestions.map((suggestion) => (
                   <div
-                    className="grid gap-3 rounded-md border border-[#d9dee7] p-3 lg:grid-cols-[128px_1fr_88px_92px]"
+                    className="grid gap-3 rounded-md border border-[#d9dee7] p-3 lg:grid-cols-[128px_1fr_112px_88px_92px]"
                     key={suggestion.start.toISOString()}
                   >
                     <div>
@@ -302,6 +402,16 @@ export function SchedulingDashboard() {
                       {suggestion.explanations.map((explanation) => (
                         <p key={explanation}>{explanation}</p>
                       ))}
+                    </div>
+                    <div className="text-sm">
+                      <p className="font-medium">
+                        {suggestion.assignedResource?.name ?? "Online"}
+                      </p>
+                      <p className="text-xs text-[#687385]">
+                        {suggestion.assignedResource
+                          ? `${suggestion.assignedResource.capacity} seats`
+                          : "No room"}
+                      </p>
                     </div>
                     <div className="flex items-center justify-start lg:justify-end">
                       <span className="rounded-md bg-[#253247] px-2 py-1 text-sm font-semibold text-white">
@@ -342,7 +452,7 @@ export function SchedulingDashboard() {
               <div className="grid gap-2">
                 {acceptedEvents.map((event) => (
                   <div
-                    className="grid gap-2 rounded-md border border-[#d9dee7] p-3 md:grid-cols-[132px_1fr]"
+                    className="grid gap-2 rounded-md border border-[#d9dee7] p-3 md:grid-cols-[132px_1fr_120px]"
                     key={event.id}
                   >
                     <div>
@@ -356,6 +466,9 @@ export function SchedulingDashboard() {
                     <p className="text-sm text-[#3c4656]">
                       {formatParticipantNames(event.participantIds)}
                     </p>
+                    <p className="text-sm text-[#687385]">
+                      {formatRoomName(event.resourceId)}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -368,6 +481,8 @@ export function SchedulingDashboard() {
                 <li>Optional participant conflicts lower the score.</li>
                 <li>Priority adds scoring weight.</li>
                 <li>Accepted events block future required-participant slots.</li>
+                <li>Offline events need a fitting available room.</li>
+                <li>Online events relax physical room constraints.</li>
               </ul>
             </div>
           </div>
@@ -407,4 +522,12 @@ function formatParticipantNames(participantIds: string[]) {
       );
     })
     .join(", ");
+}
+
+function formatRoomName(resourceId: string | undefined) {
+  if (!resourceId) {
+    return "No room";
+  }
+
+  return rooms.find((room) => room.id === resourceId)?.name ?? resourceId;
 }

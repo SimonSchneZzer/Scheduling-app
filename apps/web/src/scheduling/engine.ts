@@ -5,6 +5,7 @@ import type {
   Participant,
   ParticipantAvailability,
   Priority,
+  RoomResource,
   ScheduleSuggestion,
   TimeWindow,
 } from "./types";
@@ -23,13 +24,20 @@ export function generateScheduleSuggestions({
   eventRequest,
   participantAvailability,
   existingEvents,
+  resources,
   maxSuggestions = DEFAULT_MAX_SUGGESTIONS,
 }: GenerateScheduleSuggestionsInput): ScheduleSuggestion[] {
   const candidates = generateCandidateSlots(eventRequest);
 
   return candidates
     .map((slot) =>
-      evaluateSlot(slot, eventRequest, participantAvailability, existingEvents),
+      evaluateSlot(
+        slot,
+        eventRequest,
+        participantAvailability,
+        existingEvents,
+        resources,
+      ),
     )
     .filter((suggestion): suggestion is ScheduleSuggestion => suggestion !== null)
     .sort((a, b) => {
@@ -68,6 +76,7 @@ function evaluateSlot(
   eventRequest: EventRequest,
   participantAvailability: ParticipantAvailability[],
   existingEvents: CalendarEvent[],
+  resources: RoomResource[],
 ): ScheduleSuggestion | null {
   const requiredParticipants = eventRequest.participants.filter(
     (participant) => participant.role === "required",
@@ -96,12 +105,28 @@ function evaluateSlot(
       ? 0
       : Math.round((availableOptionalCount / optionalParticipants.length) * 40);
   const priorityScore = PRIORITY_SCORE[eventRequest.priority];
-  const score = priorityScore + optionalScore;
+  const assignedResource = findAssignedResource(
+    slot,
+    eventRequest,
+    existingEvents,
+    resources,
+  );
+
+  if (assignedResource === null) {
+    return null;
+  }
+
+  const resourceScore =
+    eventRequest.resourceRequirements.mode === "online" ? 0 : 10;
+  const score = priorityScore + optionalScore + resourceScore;
 
   const explanations = [
     `${requiredParticipants.length} required participants available`,
     `${availableOptionalCount}/${optionalParticipants.length} optional participants available`,
     `${eventRequest.priority} priority adds ${priorityScore} points`,
+    assignedResource
+      ? `${assignedResource.name} fits room constraints`
+      : "online event relaxes room constraints",
   ];
 
   return {
@@ -109,6 +134,7 @@ function evaluateSlot(
     end: slot.end,
     score,
     explanations,
+    assignedResource: assignedResource ?? undefined,
   };
 }
 
@@ -139,6 +165,50 @@ function hasParticipantEventConflict(
     const sharesParticipant = event.participantIds.includes(participant.id);
 
     return sharesParticipant && windowsOverlap(slot, event);
+  });
+}
+
+function findAssignedResource(
+  slot: TimeWindow,
+  eventRequest: EventRequest,
+  existingEvents: CalendarEvent[],
+  resources: RoomResource[],
+): RoomResource | null | undefined {
+  const { resourceRequirements } = eventRequest;
+
+  if (resourceRequirements.mode === "online") {
+    return undefined;
+  }
+
+  const matchingResources = resources
+    .filter((resource) => {
+      return (
+        resource.capacity >= resourceRequirements.seats &&
+        resourceRequirements.features.every((feature) =>
+          resource.features.includes(feature),
+        ) &&
+        resource.availability.some((window) => containsWindow(window, slot)) &&
+        !hasResourceEventConflict(slot, resource, existingEvents)
+      );
+    })
+    .sort((a, b) => {
+      if (a.capacity !== b.capacity) {
+        return a.capacity - b.capacity;
+      }
+
+      return a.name.localeCompare(b.name);
+    });
+
+  return matchingResources[0] ?? null;
+}
+
+function hasResourceEventConflict(
+  slot: TimeWindow,
+  resource: RoomResource,
+  existingEvents: CalendarEvent[],
+) {
+  return existingEvents.some((event) => {
+    return event.resourceId === resource.id && windowsOverlap(slot, event);
   });
 }
 
