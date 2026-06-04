@@ -42,7 +42,7 @@ Completed:
 Remaining:
 - Decide ORM.
 - Add backend/database setup.
-- Add first scheduling-engine module and tests.
+- Add first scheduling-engine module and tests. Done in `docs/tasks/scheduling-engine-mvp.md`.
 
 ## Phase 2: Data Model
 
@@ -56,7 +56,7 @@ Status: planned
 
 ## Phase 3: Scheduling Engine MVP
 
-Status: planned
+Status: in progress
 
 - Implement candidate slot generation.
 - Implement required participant hard constraints.
@@ -64,6 +64,14 @@ Status: planned
 - Implement priority scoring.
 - Return ranked suggestions.
 - Add tests for scheduling logic.
+
+Completed first slice:
+- Candidate slot generation for timed events.
+- Required participant availability hard constraint.
+- Existing calendar event conflict hard constraint.
+- Optional participant availability scoring.
+- Priority scoring.
+- Ranked suggestions with explanations.
 
 ## Phase 4: Calendar UI MVP
 
