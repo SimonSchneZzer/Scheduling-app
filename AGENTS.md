@@ -48,6 +48,10 @@ Current structure:
 - `README.md` - short project overview
 - `.gitignore` - ignored local, dependency, build, and environment files
 - `AGENTS.md` - persistent project context and coding instructions
+- `package.json` - root workspace scripts
+- `pnpm-workspace.yaml` - pnpm workspace definition
+- `apps/web/` - Next.js web application
+- `apps/web/src/app/` - App Router UI entrypoint
 - `docs/product-concept.md` - product concept, scheduling model, and MVP roadmap
 - `docs/technical-direction.md` - recommended technical stack and architecture direction
 - `docs/roadmap.md` - step-by-step implementation roadmap
@@ -60,12 +64,13 @@ Keep this section updated when adding major folders such as `apps/`, `src/`, `se
 
 ## Development Commands
 
-Add the canonical commands once the stack is chosen:
-- Install dependencies:
-- Start development server:
-- Run tests:
-- Build:
-- Lint/format:
+Use pnpm from the repository root:
+- Install dependencies: `pnpm install`
+- Start development server: `pnpm dev`
+- Run tests: `pnpm test`
+- Typecheck: `pnpm typecheck`
+- Build: `pnpm build`
+- Lint: `pnpm lint`
 
 ## Coding Guidelines
 
@@ -98,10 +103,10 @@ Add the canonical commands once the stack is chosen:
 ## Open Questions
 
 Use this section for unresolved project decisions:
-- Frontend framework: recommended Next.js unless changed
-- Backend framework: recommended Next.js API routes or a separate Node API once complexity requires it
+- Frontend framework: Next.js
+- Backend framework: Next.js API routes for MVP, separate Node API later if needed
 - Database: recommended PostgreSQL
-- ORM: recommended Prisma or Drizzle
+- ORM: recommended Prisma or Drizzle, undecided
 - Authentication: undecided
 - Deployment target: undecided
 - Calendar sync: not part of MVP, but design should allow Google Calendar and Microsoft Graph later

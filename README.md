@@ -34,6 +34,19 @@ The initial algorithm should be a scoring engine:
 
 ## Current Status
 
-The project is in concept and setup phase. Frontend, backend, database, and scheduling engine are not initialized yet. Persistent context files are being prepared so future coding sessions can start with the right goal and constraints.
+The project has a Next.js web scaffold under `apps/web`. Backend, database, and scheduling engine are not implemented yet.
 
-Recommended next step: choose and scaffold the application stack.
+Recommended next step: build the first framework-independent scheduling engine slice with tests.
+
+## Development
+
+Use pnpm from the repository root:
+
+```bash
+pnpm install
+pnpm dev
+pnpm typecheck
+pnpm lint
+pnpm test
+pnpm build
+```

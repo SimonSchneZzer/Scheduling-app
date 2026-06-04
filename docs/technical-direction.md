@@ -28,6 +28,12 @@ apps/
 docs/
 ```
 
+Current scaffold:
+- `apps/web` contains the Next.js App Router frontend.
+- Root `package.json` contains workspace scripts.
+- Root `pnpm-workspace.yaml` defines app packages.
+- Vitest is installed for business-logic tests.
+
 The scheduling engine should live in a framework-independent module, not directly inside UI components. It should be easy to test with plain input data.
 
 ## Backend Responsibilities

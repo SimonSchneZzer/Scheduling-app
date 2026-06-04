@@ -6,7 +6,7 @@ Set up the project foundation so a new development context immediately understan
 
 ## Phase 0: Project Context
 
-Status: in progress
+Status: done
 
 - Create repository.
 - Add `README.md`.
@@ -22,7 +22,7 @@ Status: in progress
 
 ## Phase 1: Application Scaffold
 
-Status: next
+Status: in progress
 
 - Choose package manager.
 - Initialize frontend application.
@@ -32,6 +32,17 @@ Status: next
 - Add build and development commands.
 - Update `AGENTS.md` with real commands.
 - Commit the project-context foundation before broad scaffolding.
+
+Completed:
+- Package manager: pnpm.
+- Next.js app scaffolded in `apps/web`.
+- TypeScript, Tailwind, ESLint, and Vitest are configured.
+- Root workspace scripts are available.
+
+Remaining:
+- Decide ORM.
+- Add backend/database setup.
+- Add first scheduling-engine module and tests.
 
 ## Phase 2: Data Model
 
