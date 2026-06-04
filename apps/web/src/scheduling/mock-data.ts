@@ -76,6 +76,8 @@ export const rooms: RoomResource[] = [
 export const initialCalendarEvents: CalendarEvent[] = [
   {
     id: "calendar-standup",
+    title: "Daily standup",
+    source: "seed",
     participantIds: ["mara", "simon", "lea", "jonas"],
     resourceId: "room-a",
     start: new Date("2026-06-08T09:00:00"),
@@ -83,12 +85,16 @@ export const initialCalendarEvents: CalendarEvent[] = [
   },
   {
     id: "calendar-customer-call",
+    title: "Customer call",
+    source: "seed",
     participantIds: ["simon"],
     start: new Date("2026-06-08T11:00:00"),
     end: new Date("2026-06-08T11:45:00"),
   },
   {
     id: "calendar-design-review",
+    title: "Design review",
+    source: "seed",
     participantIds: ["lea"],
     start: new Date("2026-06-08T13:30:00"),
     end: new Date("2026-06-08T14:30:00"),

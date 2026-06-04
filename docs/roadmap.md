@@ -89,6 +89,11 @@ Completed first slice:
 - UI calls the scheduling engine directly.
 - Ranked suggestions are shown with explanations.
 - Accepted suggestions are added to local calendar state.
+- Accepted suggestions persist in local browser storage.
+
+Interim persistence:
+- Accepted events persist in `localStorage` for the browser demo.
+- Seed events and accepted events are separated by event source.
 
 ## Phase 5: Resources And Long Events
 

@@ -6,6 +6,8 @@ export type EventMode = "offline" | "online";
 
 export type ResourceFeature = "whiteboard" | "screen" | "video";
 
+export type CalendarEventSource = "seed" | "accepted";
+
 export type TimeWindow = {
   start: Date;
   end: Date;
@@ -23,6 +25,8 @@ export type ParticipantAvailability = {
 
 export type CalendarEvent = {
   id: string;
+  title: string;
+  source: CalendarEventSource;
   participantIds: string[];
   resourceId?: string;
   start: Date;

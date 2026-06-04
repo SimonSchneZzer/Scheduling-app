@@ -131,6 +131,8 @@ describe("generateScheduleSuggestions", () => {
     const existingEvents: CalendarEvent[] = [
       {
         id: "existing-1",
+        title: "Existing meeting",
+        source: "seed",
         participantIds: ["required-1"],
         start: date("2026-06-08T09:00:00.000Z"),
         end: date("2026-06-08T09:30:00.000Z"),
@@ -162,6 +164,8 @@ describe("generateScheduleSuggestions", () => {
       existingEvents: [
         {
           id: "optional-conflict",
+          title: "Optional conflict",
+          source: "seed",
           participantIds: ["optional-1"],
           start: date("2026-06-08T09:00:00.000Z"),
           end: date("2026-06-08T09:30:00.000Z"),
@@ -310,6 +314,8 @@ describe("generateScheduleSuggestions", () => {
       existingEvents: [
         {
           id: "room-booking",
+          title: "Room booking",
+          source: "seed",
           participantIds: [],
           resourceId: "room-a",
           start: date("2026-06-08T09:00:00.000Z"),

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   initialCalendarEvents,
   participantAvailability,
@@ -8,6 +8,10 @@ import {
   teamMembers,
 } from "@/scheduling/mock-data";
 import { generateScheduleSuggestions } from "@/scheduling";
+import {
+  deserializeAcceptedEvents,
+  serializeAcceptedEvents,
+} from "@/scheduling/persistence";
 import type {
   CalendarEvent,
   EventMode,
@@ -21,6 +25,7 @@ import type {
 
 type ParticipantSelection = Record<string, ParticipantRole | "none">;
 
+const acceptedEventsStorageKey = "scheduling-app.accepted-events";
 const priorityOptions: Priority[] = ["low", "medium", "high", "urgent"];
 const featureOptions: ResourceFeature[] = ["whiteboard", "screen", "video"];
 
@@ -43,10 +48,32 @@ export function SchedulingDashboard() {
   ]);
   const [participantSelection, setParticipantSelection] =
     useState<ParticipantSelection>(initialSelection);
-  const [acceptedEvents, setAcceptedEvents] =
-    useState<CalendarEvent[]>(initialCalendarEvents);
+  const [persistedAcceptedEvents, setPersistedAcceptedEvents] = useState<
+    CalendarEvent[]
+  >(() => {
+    if (typeof window === "undefined") {
+      return [];
+    }
+
+    return deserializeAcceptedEvents(
+      window.localStorage.getItem(acceptedEventsStorageKey),
+    );
+  });
   const [suggestions, setSuggestions] = useState<ScheduleSuggestion[]>([]);
   const [lastRunTitle, setLastRunTitle] = useState<string | null>(null);
+
+  const acceptedEvents = useMemo(() => {
+    return [...initialCalendarEvents, ...persistedAcceptedEvents].sort(
+      (a, b) => a.start.getTime() - b.start.getTime(),
+    );
+  }, [persistedAcceptedEvents]);
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      acceptedEventsStorageKey,
+      serializeAcceptedEvents(persistedAcceptedEvents),
+    );
+  }, [persistedAcceptedEvents]);
 
   const selectedParticipants = useMemo(() => {
     return teamMembers
@@ -116,14 +143,18 @@ export function SchedulingDashboard() {
 
   function acceptSuggestion(suggestion: ScheduleSuggestion) {
     const acceptedEvent: CalendarEvent = {
-      id: `accepted-${acceptedEvents.length + 1}`,
+      id: `accepted-${suggestion.start.toISOString()}-${
+        persistedAcceptedEvents.length + 1
+      }`,
+      title,
+      source: "accepted",
       participantIds: selectedParticipants.map((participant) => participant.id),
       resourceId: suggestion.assignedResource?.id,
       start: suggestion.start,
       end: suggestion.end,
     };
 
-    setAcceptedEvents((events) =>
+    setPersistedAcceptedEvents((events) =>
       [...events, acceptedEvent].sort(
         (a, b) => a.start.getTime() - b.start.getTime(),
       ),
@@ -133,6 +164,13 @@ export function SchedulingDashboard() {
         (item) => item.start.getTime() !== suggestion.start.getTime(),
       ),
     );
+  }
+
+  function resetDemoData() {
+    setPersistedAcceptedEvents([]);
+    setSuggestions([]);
+    setLastRunTitle(null);
+    window.localStorage.removeItem(acceptedEventsStorageKey);
   }
 
   function updateParticipantRole(memberId: string, role: ParticipantRole | "none") {
@@ -166,6 +204,13 @@ export function SchedulingDashboard() {
             type="button"
           >
             Calculate best slots
+          </button>
+          <button
+            className="h-10 w-full rounded-md border border-[#cfd6e0] bg-white px-4 text-sm font-semibold text-[#253247] md:w-auto"
+            onClick={resetDemoData}
+            type="button"
+          >
+            Reset demo data
           </button>
         </div>
       </header>
@@ -463,9 +508,25 @@ export function SchedulingDashboard() {
                         {formatDate(event.start)}
                       </p>
                     </div>
-                    <p className="text-sm text-[#3c4656]">
-                      {formatParticipantNames(event.participantIds)}
-                    </p>
+                    <div>
+                      <div className="mb-1 flex flex-wrap items-center gap-2">
+                        <p className="text-sm font-medium text-[#3c4656]">
+                          {event.title}
+                        </p>
+                        <span
+                          className={
+                            event.source === "accepted"
+                              ? "rounded bg-[#e8f3ee] px-2 py-0.5 text-xs font-medium text-[#1f6f5b]"
+                              : "rounded bg-[#eef1f5] px-2 py-0.5 text-xs font-medium text-[#3c4656]"
+                          }
+                        >
+                          {event.source}
+                        </span>
+                      </div>
+                      <p className="text-sm text-[#687385]">
+                        {formatParticipantNames(event.participantIds)}
+                      </p>
+                    </div>
                     <p className="text-sm text-[#687385]">
                       {formatRoomName(event.resourceId)}
                     </p>
@@ -483,6 +544,7 @@ export function SchedulingDashboard() {
                 <li>Accepted events block future required-participant slots.</li>
                 <li>Offline events need a fitting available room.</li>
                 <li>Online events relax physical room constraints.</li>
+                <li>Accepted events persist in local browser storage.</li>
               </ul>
             </div>
           </div>
