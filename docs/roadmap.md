@@ -6,7 +6,7 @@ Set up the project foundation so a new development context immediately understan
 
 ## Phase 0: Project Context
 
-Status: in progress
+Status: done
 
 - Create repository.
 - Add `README.md`.
@@ -22,7 +22,7 @@ Status: in progress
 
 ## Phase 1: Application Scaffold
 
-Status: next
+Status: in progress
 
 - Choose package manager.
 - Initialize frontend application.
@@ -32,6 +32,17 @@ Status: next
 - Add build and development commands.
 - Update `AGENTS.md` with real commands.
 - Commit the project-context foundation before broad scaffolding.
+
+Completed:
+- Package manager: pnpm.
+- Next.js app scaffolded in `apps/web`.
+- TypeScript, Tailwind, ESLint, and Vitest are configured.
+- Root workspace scripts are available.
+
+Remaining:
+- Decide ORM.
+- Add backend/database setup.
+- Add first scheduling-engine module and tests. Done in `docs/tasks/scheduling-engine-mvp.md`.
 
 ## Phase 2: Data Model
 
@@ -45,7 +56,7 @@ Status: planned
 
 ## Phase 3: Scheduling Engine MVP
 
-Status: planned
+Status: in progress
 
 - Implement candidate slot generation.
 - Implement required participant hard constraints.
@@ -54,9 +65,17 @@ Status: planned
 - Return ranked suggestions.
 - Add tests for scheduling logic.
 
+Completed first slice:
+- Candidate slot generation for timed events.
+- Required participant availability hard constraint.
+- Existing calendar event conflict hard constraint.
+- Optional participant availability scoring.
+- Priority scoring.
+- Ranked suggestions with explanations.
+
 ## Phase 4: Calendar UI MVP
 
-Status: planned
+Status: in progress
 
 - Show team calendar.
 - Create event request form.
@@ -64,12 +83,37 @@ Status: planned
 - Show scheduling suggestions.
 - Accept a suggestion into the calendar.
 
+Completed first slice:
+- Event request form for title, duration, priority, date, time window, and participant roles.
+- Mock team availability and initial calendar events.
+- UI calls the scheduling engine directly.
+- Ranked suggestions are shown with explanations.
+- Accepted suggestions are added to local calendar state.
+- Accepted suggestions persist in local browser storage.
+
+Interim persistence:
+- Accepted events persist in `localStorage` for the browser demo.
+- Seed events and accepted events are separated by event source.
+
 ## Phase 5: Resources And Long Events
 
-Status: planned
+Status: in progress
 
 - Add rooms.
 - Add room capacity and features.
 - Add devices/resources.
 - Add online/offline mode.
 - Support all-day and multi-day event planning.
+
+Completed first resource slice:
+- Mock rooms with capacity, features, and availability.
+- Offline event requests require a fitting available room.
+- Online event requests relax room constraints.
+- Suggestions include the assigned room.
+- Accepted suggestions store local room bookings.
+
+Completed first long-event slice:
+- Event requests support timed, all-day, and multi-day types.
+- All-day requests generate whole-day candidates.
+- Multi-day requests generate contiguous day-block candidates.
+- UI displays date ranges for whole-day suggestions.

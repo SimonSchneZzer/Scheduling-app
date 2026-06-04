@@ -1,0 +1,13 @@
+{
+  "name": "scheduling-app",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.19.0",
+  "scripts": {
+    "dev": "pnpm --filter @scheduling-app/web dev",
+    "build": "pnpm --filter @scheduling-app/web build",
+    "lint": "pnpm --filter @scheduling-app/web lint",
+    "test": "pnpm --filter @scheduling-app/web test",
+    "typecheck": "pnpm --filter @scheduling-app/web typecheck"
+  }
+}
