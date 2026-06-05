@@ -28,6 +28,7 @@ export type ParticipantAvailability = {
 export type CalendarEvent = {
   id: string;
   title: string;
+  description?: string;
   source: CalendarEventSource;
   /** UI-only marker for unsaved suggestion previews; never persisted. */
   preview?: boolean;

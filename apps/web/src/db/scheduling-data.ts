@@ -102,6 +102,7 @@ export async function loadSchedulingData(): Promise<SchedulingData> {
     calendarEvents: calendarEvents.map<CalendarEvent>((event) => ({
       id: event.id,
       title: event.title,
+      description: event.description ?? undefined,
       source: "accepted",
       participantIds: event.participants.map((participant) => participant.userId),
       resourceId: event.roomId ?? undefined,
@@ -292,6 +293,7 @@ async function createValidatedAcceptedCalendarEvent(
       id,
       calendarId: DEMO_CALENDAR_ID,
       title: input.title,
+      description: input.description,
       source: "ACCEPTED",
       roomId: input.resourceId,
       eventRequestId,
@@ -323,6 +325,7 @@ async function createValidatedAcceptedCalendarEvent(
   return {
     id: event.id,
     title: event.title,
+    description: event.description ?? undefined,
     source: "accepted",
     participantIds: event.participants.map((participant) => participant.userId),
     resourceId: event.roomId ?? undefined,
@@ -382,6 +385,9 @@ export async function updateAcceptedCalendarEvent(
         start,
         end,
         ...(patch.title !== undefined ? { title: patch.title } : {}),
+        ...(patch.description === undefined
+          ? {}
+          : { description: patch.description }),
         ...(nextRoomId === undefined ? {} : { roomId: nextRoomId }),
         ...(roomIdToUse
           ? {
@@ -398,6 +404,7 @@ export async function updateAcceptedCalendarEvent(
   return {
     id: event.id,
     title: event.title,
+    description: event.description ?? undefined,
     source: "accepted",
     participantIds: event.participants.map((participant) => participant.userId),
     resourceId: event.roomId ?? undefined,
@@ -427,6 +434,7 @@ export async function deleteAcceptedCalendarEvent(
   return {
     id: existing.id,
     title: existing.title,
+    description: existing.description ?? undefined,
     source: "accepted",
     participantIds: existing.participants.map((participant) => participant.userId),
     resourceId: existing.roomId ?? undefined,

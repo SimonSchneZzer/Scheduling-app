@@ -65,6 +65,13 @@ describe("isAcceptSuggestionRequest", () => {
       }),
     ).toBe(false);
   });
+
+  it("accepts an optional string description and rejects a non-string one", () => {
+    expect(isAcceptSuggestionRequest({ ...valid, description: "Notes" })).toBe(
+      true,
+    );
+    expect(isAcceptSuggestionRequest({ ...valid, description: 7 })).toBe(false);
+  });
 });
 
 describe("isUpdateCalendarEventRequest", () => {
@@ -94,6 +101,18 @@ describe("isUpdateCalendarEventRequest", () => {
 
   it("rejects a non-string title", () => {
     expect(isUpdateCalendarEventRequest({ ...valid, title: 7 })).toBe(false);
+  });
+
+  it("accepts a null or string description and rejects other types", () => {
+    expect(isUpdateCalendarEventRequest({ ...valid, description: null })).toBe(
+      true,
+    );
+    expect(
+      isUpdateCalendarEventRequest({ ...valid, description: "Notes" }),
+    ).toBe(true);
+    expect(isUpdateCalendarEventRequest({ ...valid, description: 7 })).toBe(
+      false,
+    );
   });
 });
 

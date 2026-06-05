@@ -78,6 +78,8 @@ export function isAcceptSuggestionRequest(
   return (
     typeof value.title === "string" &&
     value.title.trim().length > 0 &&
+    (value.description === undefined ||
+      typeof value.description === "string") &&
     Array.isArray(value.participantIds) &&
     value.participantIds.every(
       (participantId) => typeof participantId === "string",
@@ -108,7 +110,10 @@ export function isUpdateCalendarEventRequest(
     (value.resourceId === undefined ||
       value.resourceId === null ||
       typeof value.resourceId === "string") &&
-    (value.title === undefined || typeof value.title === "string")
+    (value.title === undefined || typeof value.title === "string") &&
+    (value.description === undefined ||
+      value.description === null ||
+      typeof value.description === "string")
   );
 }
 
