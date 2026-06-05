@@ -98,6 +98,7 @@ model CalendarEvent {
   id             String                     @id
   calendarId     String
   title          String
+  description    String?
   source         CalendarEventSource
   start          DateTime
   end            DateTime
