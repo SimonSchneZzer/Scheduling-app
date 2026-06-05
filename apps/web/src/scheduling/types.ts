@@ -4,7 +4,9 @@ export type Priority = "low" | "medium" | "high" | "urgent";
 
 export type EventMode = "offline" | "online";
 
-export type EventType = "timed" | "all-day" | "multi-day";
+// An all-day event spans one or more whole days (durationDays >= 1); the former
+// "multi-day" type is just an all-day event with durationDays > 1.
+export type EventType = "timed" | "all-day";
 
 export type ResourceFeature = "whiteboard" | "screen" | "video";
 

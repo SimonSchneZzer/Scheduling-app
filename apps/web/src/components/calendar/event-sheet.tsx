@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { generateScheduleSuggestions } from "@/scheduling";
+import { isAllDayEvent } from "./lib/layout";
 import type {
   AcceptSuggestionRequest,
   CalendarEvent,
@@ -32,7 +33,7 @@ export type EventDraftPreview = {
   resourceId?: string;
 };
 
-const eventTypeOptions: EventType[] = ["timed", "all-day", "multi-day"];
+const eventTypeOptions: EventType[] = ["timed", "all-day"];
 const priorityOptions: Priority[] = ["low", "medium", "high", "urgent"];
 const featureOptions: ResourceFeature[] = ["whiteboard", "screen", "video"];
 
@@ -89,12 +90,20 @@ export function EventSheet({
 
   const [title, setTitle] = useState(event?.title ?? "New event");
   const [description, setDescription] = useState(event?.description ?? "");
-  const [eventType, setEventType] = useState<EventType>("timed");
+  const [eventType, setEventType] = useState<EventType>(() =>
+    event && isAllDayEvent(event.start, event.end) ? "all-day" : "timed",
+  );
   const [durationMinutes, setDurationMinutes] = useState(initialDurationMinutes);
-  const [durationDays, setDurationDays] = useState(2);
   const [priority, setPriority] = useState<Priority>("medium");
   const [eventDate, setEventDate] = useState(() =>
     toDateInput(initialStart ?? new Date()),
+  );
+  // End date for all-day events. Stored end is the exclusive next-midnight, so
+  // the inclusive last day shown is end - 1 day.
+  const [endDate, setEndDate] = useState(() =>
+    event && isAllDayEvent(event.start, event.end)
+      ? toDateInput(addDaysToDate(event.end, -1))
+      : toDateInput(initialStart ?? new Date()),
   );
   const [startTime, setStartTime] = useState(() =>
     initialStart ? toTimeInput(initialStart) : "09:00",
@@ -208,6 +217,11 @@ export function EventSheet({
     return () => onDraftChange?.(null);
   }, [onDraftChange]);
 
+  const durationDays = useMemo(
+    () => (eventType === "all-day" ? daysBetweenInclusive(eventDate, endDate) : 1),
+    [endDate, eventDate, eventType],
+  );
+
   const eventRequest = useMemo<EventRequest>(() => {
     return {
       id: "draft-event-request",
@@ -226,13 +240,15 @@ export function EventSheet({
         end:
           eventType === "timed"
             ? toDate(eventDate, endTime)
-            : toDate(addDaysToDateInput(eventDate, 3), endTime),
+            : // For all-day search, give the engine room beyond the picked range.
+              toDate(addDaysToDateInput(endDate, 7), "00:00"),
       },
       slotIncrementMinutes: 15,
     };
   }, [
     durationDays,
     durationMinutes,
+    endDate,
     endTime,
     eventDate,
     eventMode,
@@ -273,13 +289,18 @@ export function EventSheet({
 
   function applySuggestion(suggestion: ScheduleSuggestion) {
     setEventDate(toDateInput(suggestion.start));
-    setStartTime(toTimeInput(suggestion.start));
-    setEndTime(toTimeInput(suggestion.end));
-    const minutes = Math.round(
-      (suggestion.end.getTime() - suggestion.start.getTime()) / 60_000,
-    );
-    if (eventType === "timed" && minutes > 0) {
-      setDurationMinutes(minutes);
+    if (eventType === "all-day") {
+      // Stored end is the exclusive next-midnight; show the inclusive last day.
+      setEndDate(toDateInput(addDaysToDate(suggestion.end, -1)));
+    } else {
+      setStartTime(toTimeInput(suggestion.start));
+      setEndTime(toTimeInput(suggestion.end));
+      const minutes = Math.round(
+        (suggestion.end.getTime() - suggestion.start.getTime()) / 60_000,
+      );
+      if (minutes > 0) {
+        setDurationMinutes(minutes);
+      }
     }
     if (suggestion.assignedResource) {
       setSelectedResourceId(suggestion.assignedResource.id);
@@ -287,17 +308,15 @@ export function EventSheet({
   }
 
   function computeRange() {
-    const start =
-      eventType === "timed"
-        ? toDate(eventDate, startTime)
-        : toDate(eventDate, "00:00");
-    const end =
-      eventType === "timed"
-        ? toDate(eventDate, endTime)
-        : eventType === "all-day"
-          ? toDate(addDaysToDateInput(eventDate, 1), "00:00")
-          : toDate(addDaysToDateInput(eventDate, durationDays), "00:00");
-    return { start, end };
+    if (eventType === "timed") {
+      return { start: toDate(eventDate, startTime), end: toDate(eventDate, endTime) };
+    }
+    // All-day: whole days from the start date through the inclusive end date,
+    // so the stored end is the midnight after the last day.
+    return {
+      start: toDate(eventDate, "00:00"),
+      end: toDate(addDaysToDateInput(endDate, 1), "00:00"),
+    };
   }
 
   async function handleSubmit() {
@@ -468,40 +487,23 @@ export function EventSheet({
                     ))}
                   </select>
                 </label>
-                <label className="grid gap-1 text-sm">
-                  <span className="font-medium text-[#3c4656]">
-                    {eventType === "multi-day" ? "Duration (days)" : "Duration"}
-                  </span>
-                  {eventType === "multi-day" ? (
-                    <input
-                      className="h-10 rounded-md border border-[#cfd6e0] px-3"
-                      min={2}
-                      onChange={(e) => setDurationDays(Number(e.target.value))}
-                      type="number"
-                      value={durationDays}
-                    />
-                  ) : (
+                {eventType === "timed" ? (
+                  <label className="grid gap-1 text-sm">
+                    <span className="font-medium text-[#3c4656]">Duration</span>
                     <select
                       className="h-10 rounded-md border border-[#cfd6e0] px-3"
-                      disabled={eventType === "all-day"}
                       onChange={(e) =>
                         setDurationMinutes(Number(e.target.value))
                       }
                       value={durationMinutes}
                     >
-                      {eventType === "all-day" ? (
-                        <option value={1440}>1 day</option>
-                      ) : (
-                        <>
-                          <option value={30}>30 min</option>
-                          <option value={45}>45 min</option>
-                          <option value={60}>60 min</option>
-                          <option value={90}>90 min</option>
-                        </>
-                      )}
+                      <option value={30}>30 min</option>
+                      <option value={45}>45 min</option>
+                      <option value={60}>60 min</option>
+                      <option value={90}>90 min</option>
                     </select>
-                  )}
-                </label>
+                  </label>
+                ) : null}
               </div>
 
               <label className="grid gap-1 text-sm">
@@ -521,49 +523,65 @@ export function EventSheet({
             </>
           ) : null}
 
-          <div className="grid grid-cols-[1fr_96px_96px] gap-3">
-            <label className="grid gap-1 text-sm">
-              <span className="font-medium text-[#3c4656]">Date</span>
-              <input
-                className="h-10 rounded-md border border-[#cfd6e0] px-3"
-                onChange={(e) => setEventDate(e.target.value)}
-                type="date"
-                value={eventDate}
-              />
-            </label>
-            <label
-              className={
-                eventType === "timed"
-                  ? "grid gap-1 text-sm"
-                  : "grid gap-1 text-sm opacity-50"
-              }
-            >
-              <span className="font-medium text-[#3c4656]">From</span>
-              <input
-                className="h-10 rounded-md border border-[#cfd6e0] px-2"
-                disabled={eventType !== "timed"}
-                onChange={(e) => setStartTime(e.target.value)}
-                type="time"
-                value={startTime}
-              />
-            </label>
-            <label
-              className={
-                eventType === "timed"
-                  ? "grid gap-1 text-sm"
-                  : "grid gap-1 text-sm opacity-50"
-              }
-            >
-              <span className="font-medium text-[#3c4656]">To</span>
-              <input
-                className="h-10 rounded-md border border-[#cfd6e0] px-2"
-                disabled={eventType !== "timed"}
-                onChange={(e) => setEndTime(e.target.value)}
-                type="time"
-                value={endTime}
-              />
-            </label>
-          </div>
+          {eventType === "timed" ? (
+            <div className="grid grid-cols-[1fr_96px_96px] gap-3">
+              <label className="grid gap-1 text-sm">
+                <span className="font-medium text-[#3c4656]">Date</span>
+                <input
+                  className="h-10 rounded-md border border-[#cfd6e0] px-3"
+                  onChange={(e) => setEventDate(e.target.value)}
+                  type="date"
+                  value={eventDate}
+                />
+              </label>
+              <label className="grid gap-1 text-sm">
+                <span className="font-medium text-[#3c4656]">From</span>
+                <input
+                  className="h-10 rounded-md border border-[#cfd6e0] px-2"
+                  onChange={(e) => setStartTime(e.target.value)}
+                  type="time"
+                  value={startTime}
+                />
+              </label>
+              <label className="grid gap-1 text-sm">
+                <span className="font-medium text-[#3c4656]">To</span>
+                <input
+                  className="h-10 rounded-md border border-[#cfd6e0] px-2"
+                  onChange={(e) => setEndTime(e.target.value)}
+                  type="time"
+                  value={endTime}
+                />
+              </label>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              <label className="grid gap-1 text-sm">
+                <span className="font-medium text-[#3c4656]">Start date</span>
+                <input
+                  className="h-10 rounded-md border border-[#cfd6e0] px-3"
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setEventDate(next);
+                    if (next > endDate) {
+                      setEndDate(next);
+                    }
+                  }}
+                  type="date"
+                  value={eventDate}
+                />
+              </label>
+              <label className="grid gap-1 text-sm">
+                <span className="font-medium text-[#3c4656]">End date</span>
+                <input
+                  className="h-10 rounded-md border border-[#cfd6e0] px-3"
+                  min={eventDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  type="date"
+                  value={endDate}
+                />
+              </label>
+            </div>
+          )}
 
           <div className="rounded-md border border-[#d9dee7] p-3">
             <div className="mb-3 flex items-center justify-between gap-3">
@@ -862,9 +880,23 @@ function toDate(date: string, time: string) {
 }
 
 function addDaysToDateInput(date: string, days: number) {
-  const value = new Date(`${date}T00:00:00`);
+  return toDateInput(addDaysToDate(new Date(`${date}T00:00:00`), days));
+}
+
+function addDaysToDate(date: Date, days: number) {
+  const value = new Date(date);
   value.setDate(value.getDate() + days);
-  return toDateInput(value);
+  return value;
+}
+
+/** Inclusive whole-day span between two date inputs (>= 1). */
+function daysBetweenInclusive(startInput: string, endInput: string) {
+  const start = new Date(`${startInput}T00:00:00`);
+  const end = new Date(`${endInput}T00:00:00`);
+  const diffDays = Math.round(
+    (end.getTime() - start.getTime()) / (24 * 60 * 60 * 1000),
+  );
+  return Math.max(1, diffDays + 1);
 }
 
 function formatDate(date: Date) {

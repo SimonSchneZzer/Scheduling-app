@@ -52,10 +52,6 @@ export function generateScheduleSuggestions({
 
 export function generateCandidateSlots(eventRequest: EventRequest): TimeWindow[] {
   if (eventRequest.eventType === "all-day") {
-    return generateDaySlots(eventRequest, 1);
-  }
-
-  if (eventRequest.eventType === "multi-day") {
     return generateDaySlots(eventRequest, eventRequest.durationDays ?? 1);
   }
 

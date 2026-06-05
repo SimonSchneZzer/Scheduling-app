@@ -41,7 +41,7 @@ export class ScheduleSuggestionNotFoundError extends Error {
 type PrismaParticipantRole = "REQUIRED" | "OPTIONAL";
 type PrismaPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
 type PrismaEventMode = "OFFLINE" | "ONLINE";
-type PrismaEventType = "TIMED" | "ALL_DAY" | "MULTI_DAY";
+type PrismaEventType = "TIMED" | "ALL_DAY";
 
 export async function loadSchedulingData(): Promise<SchedulingData> {
   const prisma = getPrismaClient();
@@ -482,17 +482,9 @@ function mapEventModeToPrisma(mode: "offline" | "online"): PrismaEventMode {
 }
 
 function mapEventTypeToPrisma(
-  eventType: "timed" | "all-day" | "multi-day",
+  eventType: "timed" | "all-day",
 ): PrismaEventType {
-  if (eventType === "all-day") {
-    return "ALL_DAY";
-  }
-
-  if (eventType === "multi-day") {
-    return "MULTI_DAY";
-  }
-
-  return "TIMED";
+  return eventType === "all-day" ? "ALL_DAY" : "TIMED";
 }
 
 function mapStoredScheduleSuggestion(
