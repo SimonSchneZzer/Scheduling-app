@@ -9,6 +9,7 @@ import type {
 } from "@/components/calendar/calendar-view";
 import { EventSheet } from "@/components/calendar/event-sheet";
 import {
+  deserializeScheduleRunHistory,
   deserializeScheduleRunResponse,
   deserializeSchedulingData,
 } from "@/scheduling";
@@ -24,12 +25,22 @@ import type {
   SerializedCalendarEvent,
   SerializedScheduleRunResponse,
   SerializedSchedulingData,
+  ScheduleSuggestion,
+  ScheduleRunHistoryItem,
   StoredScheduleSuggestion,
+  SerializedScheduleRunHistoryItem,
   UpdateCalendarEventRequest,
 } from "@/scheduling";
 
 const acceptedEventsStorageKey = "scheduling-app.accepted-events";
 const initialAnchorDate = new Date("2026-06-08T00:00:00");
+
+function createDefaultEventRange() {
+  return {
+    start: new Date("2026-06-08T15:30:00"),
+    end: new Date("2026-06-08T16:15:00"),
+  };
+}
 
 export function SchedulingDashboard() {
   const [schedulingData, setSchedulingData] =
@@ -41,18 +52,31 @@ export function SchedulingDashboard() {
   const [isResetting, setIsResetting] = useState(false);
   const [persistedAcceptedEvents, setPersistedAcceptedEvents] = useState<
     CalendarEvent[]
-  >(() => {
-    if (typeof window === "undefined") {
-      return [];
-    }
-    return deserializeAcceptedEvents(
-      window.localStorage.getItem(acceptedEventsStorageKey),
-    );
-  });
+  >([]);
+  const [localStorageLoaded, setLocalStorageLoaded] = useState(false);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sheetInitialRange, setSheetInitialRange] = useState<
     { start: Date; end: Date } | undefined
   >(undefined);
+  const [pendingSuggestionEvents, setPendingSuggestionEvents] = useState<
+    CalendarEvent[]
+  >([]);
+  const [scheduleRunHistory, setScheduleRunHistory] = useState<
+    ScheduleRunHistoryItem[]
+  >([]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setPersistedAcceptedEvents(
+        deserializeAcceptedEvents(
+          window.localStorage.getItem(acceptedEventsStorageKey),
+        ),
+      );
+      setLocalStorageLoaded(true);
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     let isCurrent = true;
@@ -77,6 +101,7 @@ export function SchedulingDashboard() {
         setSchedulingData(nextData);
         setDataSource("database");
         setDataError(null);
+        void refreshScheduleRunHistory();
       } catch {
         if (!isCurrent) {
           return;
@@ -84,6 +109,7 @@ export function SchedulingDashboard() {
 
         setDataSource("local");
         setDataError("Using local demo data until PostgreSQL is available.");
+        setScheduleRunHistory([]);
       }
     }
 
@@ -110,7 +136,7 @@ export function SchedulingDashboard() {
   }, [persistedAcceptedEvents]);
 
   const activeSchedulingData =
-    dataSource === "database" ? schedulingData : localSchedulingData;
+    dataSource === "local" ? localSchedulingData : schedulingData;
   const teamMembers = activeSchedulingData.teamMembers;
   const participantAvailability = activeSchedulingData.participantAvailability;
   const rooms = activeSchedulingData.rooms;
@@ -122,16 +148,16 @@ export function SchedulingDashboard() {
   }, [activeSchedulingData.calendarEvents]);
 
   useEffect(() => {
-    if (dataSource !== "database") {
+    if (dataSource !== "database" && localStorageLoaded) {
       window.localStorage.setItem(
         acceptedEventsStorageKey,
         serializeAcceptedEvents(persistedAcceptedEvents),
       );
     }
-  }, [dataSource, persistedAcceptedEvents]);
+  }, [dataSource, localStorageLoaded, persistedAcceptedEvents]);
 
   const openSheetForNew = useCallback(() => {
-    setSheetInitialRange(undefined);
+    setSheetInitialRange(createDefaultEventRange());
     setSheetOpen(true);
   }, []);
 
@@ -146,7 +172,24 @@ export function SchedulingDashboard() {
   const closeSheet = useCallback(() => {
     setSheetOpen(false);
     setSheetInitialRange(undefined);
+    setPendingSuggestionEvents([]);
   }, []);
+
+  async function refreshScheduleRunHistory() {
+    try {
+      const response = await fetch("/api/schedule-runs", { cache: "no-store" });
+      if (!response.ok) {
+        throw new Error("Schedule run history unavailable.");
+      }
+      setScheduleRunHistory(
+        deserializeScheduleRunHistory(
+          (await response.json()) as SerializedScheduleRunHistoryItem[],
+        ),
+      );
+    } catch {
+      setScheduleRunHistory([]);
+    }
+  }
 
   async function submitNewEvent(request: AcceptSuggestionRequest) {
     if (dataSource === "database") {
@@ -207,7 +250,27 @@ export function SchedulingDashboard() {
       (await response.json()) as SerializedScheduleRunResponse,
     );
 
+    void refreshScheduleRunHistory();
     return run.suggestions;
+  }
+
+  function previewSuggestions(
+    request: CreateScheduleRunRequest,
+    suggestions: ScheduleSuggestion[],
+  ) {
+    setPendingSuggestionEvents(
+      suggestions.map((suggestion, index) => ({
+        id: `suggestion-${suggestion.start.toISOString()}-${index}`,
+        title: `${request.title} Vorschlag ${index + 1}`,
+        source: "suggestion",
+        participantIds: request.eventRequest.participants.map(
+          (participant) => participant.id,
+        ),
+        resourceId: suggestion.assignedResource?.id,
+        start: suggestion.start,
+        end: suggestion.end,
+      })),
+    );
   }
 
   async function acceptStoredSuggestion(suggestion: StoredScheduleSuggestion) {
@@ -232,6 +295,8 @@ export function SchedulingDashboard() {
         (a, b) => a.start.getTime() - b.start.getTime(),
       ),
     }));
+    setPendingSuggestionEvents([]);
+    void refreshScheduleRunHistory();
   }
 
   async function persistEventUpdate(
@@ -285,6 +350,45 @@ export function SchedulingDashboard() {
     return updated;
   }
 
+  async function deleteEvent(target: CalendarEvent) {
+    if (target.source !== "accepted") {
+      setDataError("Seed-Termine können im Demo-Modus nicht gelöscht werden.");
+      return;
+    }
+
+    setDataError(null);
+
+    if (dataSource === "database") {
+      try {
+        const response = await fetch(`/api/calendar-events/${target.id}`, {
+          method: "DELETE",
+        });
+
+        if (!response.ok) {
+          throw new Error(await calendarEventApiError(response));
+        }
+
+        setSchedulingData((current) => ({
+          ...current,
+          calendarEvents: current.calendarEvents.filter(
+            (event) => event.id !== target.id,
+          ),
+        }));
+      } catch (error) {
+        setDataError(
+          error instanceof Error
+            ? error.message
+            : "Termin konnte nicht gelöscht werden.",
+        );
+      }
+      return;
+    }
+
+    setPersistedAcceptedEvents((events) =>
+      events.filter((event) => event.id !== target.id),
+    );
+  }
+
   async function handleEventMove({ event, start, end }: CalendarMovePayload) {
     if (event.source !== "accepted") {
       setDataError("Seed-Termine sind im Demo-Modus nicht verschiebbar.");
@@ -305,7 +409,7 @@ export function SchedulingDashboard() {
     }
   }
 
-  async function handleEventResize({ event, end }: CalendarResizePayload) {
+  async function handleEventResize({ event, start, end }: CalendarResizePayload) {
     if (event.source !== "accepted") {
       setDataError("Seed-Termine sind im Demo-Modus nicht resizebar.");
       return;
@@ -313,7 +417,7 @@ export function SchedulingDashboard() {
     setDataError(null);
     try {
       await persistEventUpdate(event, {
-        start: event.start.toISOString(),
+        start: (start ?? event.start).toISOString(),
         end: end.toISOString(),
       });
     } catch (error) {
@@ -341,6 +445,7 @@ export function SchedulingDashboard() {
 
         const payload = (await response.json()) as SerializedSchedulingData;
         setSchedulingData(deserializeSchedulingData(payload));
+        void refreshScheduleRunHistory();
       } catch {
         setDataError("Could not reset accepted PostgreSQL events.");
       } finally {
@@ -398,11 +503,18 @@ export function SchedulingDashboard() {
         <CalendarView
           events={acceptedEvents}
           initialDate={initialAnchorDate}
+          suggestionEvents={pendingSuggestionEvents}
           rooms={rooms}
           teamMembers={teamMembers}
           onEventMove={handleEventMove}
           onEventResize={handleEventResize}
+          onEventDelete={deleteEvent}
           onRangeCreate={handleRangeCreate}
+        />
+
+        <ScheduleRunHistoryPanel
+          dataSource={dataSource}
+          runs={scheduleRunHistory}
         />
       </div>
 
@@ -417,6 +529,7 @@ export function SchedulingDashboard() {
           onFindSuggestions={
             dataSource === "database" ? createStoredScheduleRun : undefined
           }
+          onSuggestionsPreview={previewSuggestions}
           onSubmit={submitNewEvent}
           participantAvailability={participantAvailability}
           rooms={rooms}
@@ -457,4 +570,76 @@ async function calendarEventApiError(response: Response) {
   }
 
   return `Kalender-Update fehlgeschlagen (${response.status}).`;
+}
+
+function ScheduleRunHistoryPanel({
+  dataSource,
+  runs,
+}: {
+  dataSource: "loading" | "database" | "local";
+  runs: ScheduleRunHistoryItem[];
+}) {
+  return (
+    <section className="rounded-lg border border-[#d9dee7] bg-white p-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold">Schedule run history</h2>
+          <p className="text-sm text-[#687385]">
+            Gespeicherte Anfragen, Runs und akzeptierte Vorschläge.
+          </p>
+        </div>
+        <span className="rounded bg-[#eef1f5] px-2 py-1 text-xs font-medium text-[#3c4656]">
+          {dataSource === "database" ? "PostgreSQL" : "Demo"}
+        </span>
+      </div>
+
+      {dataSource !== "database" ? (
+        <p className="mt-3 rounded-md border border-dashed border-[#cfd6e0] p-3 text-sm text-[#687385]">
+          History ist verfügbar, sobald PostgreSQL geladen ist.
+        </p>
+      ) : runs.length === 0 ? (
+        <p className="mt-3 rounded-md border border-dashed border-[#cfd6e0] p-3 text-sm text-[#687385]">
+          Noch keine gespeicherten Schedule Runs.
+        </p>
+      ) : (
+        <div className="mt-3 grid gap-2">
+          {runs.map((run) => (
+            <div
+              className="grid gap-2 rounded-md border border-[#e3e8ef] px-3 py-2 text-sm md:grid-cols-[1fr_auto_auto]"
+              key={run.id}
+            >
+              <div>
+                <p className="font-semibold text-[#253247]">{run.title}</p>
+                <p className="text-xs text-[#687385]">
+                  {formatRunDate(run.createdAt)} · {run.suggestionCount}{" "}
+                  {run.suggestionCount === 1 ? "Vorschlag" : "Vorschläge"}
+                </p>
+              </div>
+              <span className="self-center rounded bg-[#253247] px-2 py-1 text-xs font-semibold text-white">
+                Top {run.topScore ?? "-"}
+              </span>
+              <span
+                className={`self-center rounded px-2 py-1 text-xs font-semibold ${
+                  run.acceptedEventId
+                    ? "bg-[#e8f3ee] text-[#1f6f5b]"
+                    : "bg-[#fff7e6] text-[#7a4a08]"
+                }`}
+              >
+                {run.acceptedEventId ? "Accepted" : "Open"}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function formatRunDate(date: Date) {
+  return new Intl.DateTimeFormat("de", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
 }

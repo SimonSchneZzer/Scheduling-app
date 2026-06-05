@@ -16,6 +16,7 @@ type EventDetailsProps = {
   teamMembers: TeamMember[];
   rooms: RoomResource[];
   onClose: () => void;
+  onDelete?: (event: CalendarEvent) => void;
 };
 
 export function EventDetails({
@@ -24,6 +25,7 @@ export function EventDetails({
   teamMembers,
   rooms,
   onClose,
+  onDelete,
 }: EventDetailsProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ top: number; left: number } | null>(
@@ -114,10 +116,16 @@ export function EventDetails({
           className={`mt-2 inline-block rounded px-2 py-0.5 text-xs font-medium ${
             event.source === "accepted"
               ? "bg-[#e8f3ee] text-[#1f6f5b]"
+              : event.source === "suggestion"
+                ? "bg-[#fff7e6] text-[#7a4a08]"
               : "bg-[#eef1f5] text-[#3c4656]"
           }`}
         >
-          {event.source === "accepted" ? "Accepted" : "Seeded"}
+          {event.source === "accepted"
+            ? "Accepted"
+            : event.source === "suggestion"
+              ? "Suggestion"
+              : "Seeded"}
         </span>
 
         <dl className="mt-3 grid gap-2.5 text-sm">
@@ -155,6 +163,18 @@ export function EventDetails({
             </div>
           </div>
         </dl>
+
+        {event.source === "accepted" && onDelete ? (
+          <div className="mt-4 border-t border-[#e3e8ef] pt-3">
+            <button
+              className="h-9 w-full rounded-md border border-[#e5484d] px-3 text-sm font-semibold text-[#a3262b] hover:bg-[#fbeaea]"
+              onClick={() => onDelete(event)}
+              type="button"
+            >
+              Termin löschen
+            </button>
+          </div>
+        ) : null}
       </div>
     </div>,
     document.body,

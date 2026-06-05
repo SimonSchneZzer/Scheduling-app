@@ -4,8 +4,10 @@ export {
   serializeAcceptedEvents,
 } from "./persistence";
 export {
+  deserializeScheduleRunHistory,
   deserializeSchedulingData,
   deserializeScheduleRunResponse,
+  serializeScheduleRunHistory,
   serializeSchedulingData,
   serializeScheduleRunResponse,
 } from "./api-types";
@@ -31,9 +33,11 @@ export type {
   CreateScheduleRunRequest,
   SchedulingData,
   SerializedCalendarEvent,
+  SerializedScheduleRunHistoryItem,
   SerializedScheduleRunResponse,
   SerializedSchedulingData,
   SerializedStoredScheduleSuggestion,
+  ScheduleRunHistoryItem,
   ScheduleRunResponse,
   StoredScheduleSuggestion,
   TeamMember,

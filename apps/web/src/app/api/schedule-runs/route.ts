@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
-import { createScheduleRun } from "@/db/scheduling-data";
 import {
+  createScheduleRun,
+  loadScheduleRunHistory,
+} from "@/db/scheduling-data";
+import {
+  serializeScheduleRunHistory,
   serializeScheduleRunResponse,
   type CreateScheduleRunRequest,
   type EventMode,
@@ -10,6 +14,21 @@ import {
   type Priority,
   type ResourceFeature,
 } from "@/scheduling";
+
+export async function GET() {
+  try {
+    return NextResponse.json(
+      serializeScheduleRunHistory(await loadScheduleRunHistory()),
+    );
+  } catch (error) {
+    console.error(error);
+
+    return NextResponse.json(
+      { error: "Schedule run history could not be loaded." },
+      { status: 503 },
+    );
+  }
+}
 
 export async function POST(request: Request) {
   let payload: unknown;

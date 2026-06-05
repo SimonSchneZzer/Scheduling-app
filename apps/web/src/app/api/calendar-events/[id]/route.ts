@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   CalendarEventValidationError,
+  deleteAcceptedCalendarEvent,
   updateAcceptedCalendarEvent,
 } from "@/db/scheduling-data";
 import type { UpdateCalendarEventRequest } from "@/scheduling";
@@ -55,6 +56,37 @@ export async function PATCH(
 
     return NextResponse.json(
       { error: "Calendar event could not be updated." },
+      { status: 503 },
+    );
+  }
+}
+
+export async function DELETE(
+  _request: Request,
+  context: { params: Promise<{ id: string }> },
+) {
+  const { id } = await context.params;
+
+  try {
+    const event = await deleteAcceptedCalendarEvent(id);
+
+    if (!event) {
+      return NextResponse.json(
+        { error: "Calendar event not found or not editable." },
+        { status: 404 },
+      );
+    }
+
+    return NextResponse.json({
+      ...event,
+      start: event.start.toISOString(),
+      end: event.end.toISOString(),
+    });
+  } catch (error) {
+    console.error(error);
+
+    return NextResponse.json(
+      { error: "Calendar event could not be deleted." },
       { status: 503 },
     );
   }

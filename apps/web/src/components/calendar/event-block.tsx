@@ -38,6 +38,8 @@ type EventBlockProps = {
 const variantStyles: Record<CalendarEvent["source"], string> = {
   accepted: "border-l-[3px] border-[#1f6f5b] bg-[#e8f3ee] text-[#1c5345]",
   seed: "border-l-[3px] border-[#c2ccd9] bg-[#eef1f5] text-[#3c4656]",
+  suggestion:
+    "border-l-[3px] border-[#b7791f] bg-[#fff7e6] text-[#7a4a08] outline outline-1 outline-dashed outline-[#d99a32]",
 };
 
 export function EventBlock({

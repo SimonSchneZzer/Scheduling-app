@@ -8,7 +8,7 @@ export type EventType = "timed" | "all-day" | "multi-day";
 
 export type ResourceFeature = "whiteboard" | "screen" | "video";
 
-export type CalendarEventSource = "seed" | "accepted";
+export type CalendarEventSource = "seed" | "accepted" | "suggestion";
 
 export type TimeWindow = {
   start: Date;
