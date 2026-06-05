@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { generateScheduleSuggestions } from "@/scheduling";
 import type {
   AcceptSuggestionRequest,
@@ -37,6 +37,8 @@ const priorityOptions: Priority[] = ["low", "medium", "high", "urgent"];
 const featureOptions: ResourceFeature[] = ["whiteboard", "screen", "video"];
 
 const DRAFT_PREVIEW_ID = "draft-preview";
+/** Keep in sync with the `duration-200` transition on the sheet/backdrop. */
+const SHEET_ANIM_MS = 200;
 
 export type EventSheetProps = {
   onClose: () => void;
@@ -119,13 +121,25 @@ export function EventSheet({
   const [isFindingSlots, setIsFindingSlots] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [mounted, setMounted] = useState(false);
+  // `open` drives both the enter and exit transition; closingRef guards against
+  // double-triggering the delayed unmount.
+  const [open, setOpen] = useState(false);
+  const closingRef = useRef(false);
 
-  // Trigger the open animation after first paint.
+  // Start off-screen, then animate in on the next frame after mount.
   useEffect(() => {
-    const frame = requestAnimationFrame(() => setMounted(true));
+    const frame = requestAnimationFrame(() => setOpen(true));
     return () => cancelAnimationFrame(frame);
   }, []);
+
+  const requestClose = useCallback(() => {
+    if (closingRef.current) {
+      return;
+    }
+    closingRef.current = true;
+    setOpen(false);
+    window.setTimeout(onClose, SHEET_ANIM_MS);
+  }, [onClose]);
 
   const editParticipantNames = useMemo(() => {
     if (!event) {
@@ -308,7 +322,7 @@ export function EventSheet({
           start: start.toISOString(),
           end: end.toISOString(),
         });
-        onClose();
+        requestClose();
         return;
       }
 
@@ -332,7 +346,7 @@ export function EventSheet({
       });
 
       onSuggestionsPreview?.({ title, eventRequest }, []);
-      onClose();
+      requestClose();
     } catch (error) {
       setSubmitError(
         error instanceof Error
@@ -358,7 +372,7 @@ export function EventSheet({
     try {
       await onAcceptSuggestion({ ...suggestion, id: suggestion.id });
       onSuggestionsPreview?.({ title, eventRequest }, []);
-      onClose();
+      requestClose();
     } catch (error) {
       setSubmitError(
         error instanceof Error
@@ -386,15 +400,15 @@ export function EventSheet({
     <div className="fixed inset-0 z-50 flex">
       <div
         aria-hidden
-        className={`flex-1 bg-black/30 transition-opacity duration-200 motion-reduce:transition-none ${
-          mounted ? "opacity-100" : "opacity-0"
+        className={`flex-1 bg-black/40 transition-opacity duration-200 ease-out motion-reduce:transition-none ${
+          open ? "opacity-100" : "opacity-0"
         }`}
-        onClick={onClose}
+        onClick={requestClose}
       />
       <aside
         aria-label={isEdit ? "Edit event" : "Create event"}
-        className={`flex h-full w-full max-w-[480px] flex-col overflow-y-auto border-l border-[#d9dee7] bg-white shadow-xl transition-transform duration-200 ease-out motion-reduce:transition-none ${
-          mounted ? "translate-x-0" : "translate-x-full"
+        className={`flex h-full w-full max-w-[480px] flex-col overflow-y-auto border-l border-[#d9dee7] bg-white shadow-xl transition-transform duration-200 ease-out will-change-transform motion-reduce:transition-none ${
+          open ? "translate-x-0" : "translate-x-full"
         }`}
         role="dialog"
       >
@@ -410,7 +424,7 @@ export function EventSheet({
           <button
             aria-label="Close"
             className="h-9 w-9 rounded-md border border-[#cfd6e0] text-lg text-[#3c4656]"
-            onClick={onClose}
+            onClick={requestClose}
             type="button"
           >
             ×
@@ -768,7 +782,7 @@ export function EventSheet({
               className="h-10 rounded-md border border-[#e5484d] px-4 text-sm font-semibold text-[#a3262b] hover:bg-[#fbeaea]"
               onClick={() => {
                 onDelete(event);
-                onClose();
+                requestClose();
               }}
               type="button"
             >
@@ -780,7 +794,7 @@ export function EventSheet({
           <div className="flex items-center gap-3">
             <button
               className="h-10 rounded-md border border-[#cfd6e0] px-4 text-sm font-semibold text-[#253247]"
-              onClick={onClose}
+              onClick={requestClose}
               type="button"
             >
               Cancel
