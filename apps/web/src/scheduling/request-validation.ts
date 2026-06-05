@@ -38,7 +38,7 @@ export function isEventMode(value: unknown): value is EventMode {
 }
 
 export function isEventType(value: unknown): value is EventType {
-  return value === "timed" || value === "all-day" || value === "multi-day";
+  return value === "timed" || value === "all-day";
 }
 
 export function isResourceFeature(value: unknown): value is ResourceFeature {

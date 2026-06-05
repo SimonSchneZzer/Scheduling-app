@@ -25,9 +25,8 @@ enum EventMode {
 }
 
 enum EventType {
-  TIMED     @map("timed")
-  ALL_DAY   @map("all-day")
-  MULTI_DAY @map("multi-day")
+  TIMED   @map("timed")
+  ALL_DAY @map("all-day")
 }
 
 enum CalendarEventSource {

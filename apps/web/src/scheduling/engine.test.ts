@@ -370,11 +370,11 @@ describe("generateScheduleSuggestions", () => {
     expect(suggestions[1]?.end).toEqual(date("2026-06-10T00:00:00"));
   });
 
-  it("generates multi-day candidates as contiguous day blocks", () => {
+  it("generates multi-day all-day candidates as contiguous day blocks", () => {
     const suggestions = generateScheduleSuggestions({
       eventRequest: {
         ...baseEventRequest,
-        eventType: "multi-day",
+        eventType: "all-day",
         durationDays: 2,
         searchWindow: {
           start: date("2026-06-08T09:00:00.000Z"),
