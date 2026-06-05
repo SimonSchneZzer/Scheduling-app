@@ -8,7 +8,8 @@ export type EventMode = "offline" | "online";
 // "multi-day" type is just an all-day event with durationDays > 1.
 export type EventType = "timed" | "all-day";
 
-export type ResourceFeature = "whiteboard" | "screen" | "video";
+// A room feature is a user-created record, referenced by its id.
+export type ResourceFeature = string;
 
 export type CalendarEventSource = "accepted";
 

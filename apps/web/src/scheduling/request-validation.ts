@@ -4,6 +4,12 @@ import type {
   UpdateCalendarEventRequest,
 } from "./api-types";
 import type {
+  FeatureInput,
+  ManagedWindow,
+  ParticipantInput,
+  RoomInput,
+} from "./management-types";
+import type {
   EventMode,
   EventRequest,
   EventType,
@@ -42,7 +48,7 @@ export function isEventType(value: unknown): value is EventType {
 }
 
 export function isResourceFeature(value: unknown): value is ResourceFeature {
-  return value === "whiteboard" || value === "screen" || value === "video";
+  return typeof value === "string" && value.length > 0;
 }
 
 function isParticipant(value: unknown): value is {
@@ -115,6 +121,85 @@ export function isUpdateCalendarEventRequest(
       value.description === null ||
       typeof value.description === "string")
   );
+}
+
+function isManagedWindow(value: unknown): value is ManagedWindow {
+  return (
+    isRecord(value) &&
+    typeof value.start === "string" &&
+    isValidDate(value.start) &&
+    typeof value.end === "string" &&
+    isValidDate(value.end) &&
+    new Date(value.start) < new Date(value.end)
+  );
+}
+
+function parseWindows(value: unknown): ManagedWindow[] | null {
+  if (value === undefined) {
+    return [];
+  }
+  if (!Array.isArray(value) || !value.every(isManagedWindow)) {
+    return null;
+  }
+  return value.map((window) => ({ start: window.start, end: window.end }));
+}
+
+export function parseParticipantInput(
+  value: unknown,
+): ParticipantInput | null {
+  if (
+    !isRecord(value) ||
+    typeof value.name !== "string" ||
+    value.name.trim().length === 0 ||
+    !isParticipantRole(value.defaultRole)
+  ) {
+    return null;
+  }
+
+  const availability = parseWindows(value.availability);
+  if (!availability) {
+    return null;
+  }
+
+  return { name: value.name, defaultRole: value.defaultRole, availability };
+}
+
+export function parseRoomInput(value: unknown): RoomInput | null {
+  if (
+    !isRecord(value) ||
+    typeof value.name !== "string" ||
+    value.name.trim().length === 0 ||
+    typeof value.capacity !== "number" ||
+    !Number.isFinite(value.capacity) ||
+    value.capacity < 0 ||
+    !Array.isArray(value.featureIds) ||
+    !value.featureIds.every((id) => typeof id === "string")
+  ) {
+    return null;
+  }
+
+  const availability = parseWindows(value.availability);
+  if (!availability) {
+    return null;
+  }
+
+  return {
+    name: value.name,
+    capacity: Math.floor(value.capacity),
+    featureIds: value.featureIds,
+    availability,
+  };
+}
+
+export function parseFeatureInput(value: unknown): FeatureInput | null {
+  if (
+    !isRecord(value) ||
+    typeof value.label !== "string" ||
+    value.label.trim().length === 0
+  ) {
+    return null;
+  }
+  return { label: value.label };
 }
 
 export function parseCreateScheduleRunRequest(
