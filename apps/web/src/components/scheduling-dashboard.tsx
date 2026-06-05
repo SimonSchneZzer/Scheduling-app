@@ -8,7 +8,10 @@ import type {
   CalendarResizePayload,
 } from "@/components/calendar/calendar-view";
 import { EventSheet } from "@/components/calendar/event-sheet";
-import { deserializeSchedulingData } from "@/scheduling";
+import {
+  deserializeScheduleRunResponse,
+  deserializeSchedulingData,
+} from "@/scheduling";
 import {
   deserializeAcceptedEvents,
   serializeAcceptedEvents,
@@ -16,9 +19,12 @@ import {
 import type {
   AcceptSuggestionRequest,
   CalendarEvent,
+  CreateScheduleRunRequest,
   SchedulingData,
   SerializedCalendarEvent,
+  SerializedScheduleRunResponse,
   SerializedSchedulingData,
+  StoredScheduleSuggestion,
   UpdateCalendarEventRequest,
 } from "@/scheduling";
 
@@ -151,7 +157,7 @@ export function SchedulingDashboard() {
       });
 
       if (!response.ok) {
-        throw new Error("Termin konnte nicht gespeichert werden.");
+        throw new Error(await calendarEventApiError(response));
       }
 
       const event = deserializeCalendarEvent(
@@ -184,6 +190,50 @@ export function SchedulingDashboard() {
     );
   }
 
+  async function createStoredScheduleRun(
+    request: CreateScheduleRunRequest,
+  ): Promise<StoredScheduleSuggestion[]> {
+    const response = await fetch("/api/schedule-runs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(request),
+    });
+
+    if (!response.ok) {
+      throw new Error(await calendarEventApiError(response));
+    }
+
+    const run = deserializeScheduleRunResponse(
+      (await response.json()) as SerializedScheduleRunResponse,
+    );
+
+    return run.suggestions;
+  }
+
+  async function acceptStoredSuggestion(suggestion: StoredScheduleSuggestion) {
+    const response = await fetch(
+      `/api/schedule-suggestions/${suggestion.id}/accept`,
+      {
+        method: "POST",
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error(await calendarEventApiError(response));
+    }
+
+    const event = deserializeCalendarEvent(
+      (await response.json()) as SerializedCalendarEvent,
+    );
+
+    setSchedulingData((current) => ({
+      ...current,
+      calendarEvents: [...current.calendarEvents, event].sort(
+        (a, b) => a.start.getTime() - b.start.getTime(),
+      ),
+    }));
+  }
+
   async function persistEventUpdate(
     target: CalendarEvent,
     patch: UpdateCalendarEventRequest,
@@ -196,7 +246,7 @@ export function SchedulingDashboard() {
       });
 
       if (!response.ok) {
-        throw new Error("Update konnte nicht gespeichert werden.");
+        throw new Error(await calendarEventApiError(response));
       }
 
       const updated = deserializeCalendarEvent(
@@ -361,6 +411,12 @@ export function SchedulingDashboard() {
           existingEvents={acceptedEvents}
           initialRange={sheetInitialRange}
           onClose={closeSheet}
+          onAcceptSuggestion={
+            dataSource === "database" ? acceptStoredSuggestion : undefined
+          }
+          onFindSuggestions={
+            dataSource === "database" ? createStoredScheduleRun : undefined
+          }
           onSubmit={submitNewEvent}
           participantAvailability={participantAvailability}
           rooms={rooms}
@@ -377,4 +433,28 @@ function deserializeCalendarEvent(event: SerializedCalendarEvent): CalendarEvent
     start: new Date(event.start),
     end: new Date(event.end),
   };
+}
+
+async function calendarEventApiError(response: Response) {
+  try {
+    const payload = (await response.json()) as {
+      error?: unknown;
+      reasons?: unknown;
+    };
+    const reasons = Array.isArray(payload.reasons)
+      ? payload.reasons.filter((reason): reason is string => typeof reason === "string")
+      : [];
+
+    if (reasons.length > 0) {
+      return reasons.join(" ");
+    }
+
+    if (typeof payload.error === "string") {
+      return payload.error;
+    }
+  } catch {
+    // Fall through to the status-based default.
+  }
+
+  return `Kalender-Update fehlgeschlagen (${response.status}).`;
 }

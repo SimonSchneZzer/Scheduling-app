@@ -38,7 +38,7 @@ The project has a Next.js web app under `apps/web` with the first local core sch
 
 Prisma has been selected for PostgreSQL persistence. The first database schema, migration, seed script, Prisma Client setup, and database-backed API flow are in place. The UI loads and persists through PostgreSQL when available, with local browser persistence as a demo fallback.
 
-Recommended next step: decide the local PostgreSQL workflow for contributors, then improve the calendar view with a denser day/week layout.
+Recommended next step: validate the database-backed scheduling flow locally, then add conflict validation to calendar drag/resize updates.
 
 ## Development
 
@@ -56,3 +56,40 @@ pnpm db:generate
 pnpm db:migrate
 pnpm db:seed
 ```
+
+## Local Database
+
+The database-backed flow uses the local PostgreSQL service defined in `compose.yaml`. It publishes PostgreSQL on host port `55432` to avoid collisions with any existing local database on `5432`.
+
+1. Copy the example environment file:
+
+```bash
+cp apps/web/.env.example apps/web/.env
+```
+
+2. Start PostgreSQL:
+
+```bash
+pnpm db:up
+```
+
+3. Run migrations and seed demo data:
+
+```bash
+pnpm db:setup
+```
+
+4. Start the app:
+
+```bash
+pnpm dev
+```
+
+Useful database commands:
+
+```bash
+pnpm db:down
+pnpm db:reset
+```
+
+`pnpm db:reset` clears the local database, reruns migrations, and asks Prisma to reseed data.

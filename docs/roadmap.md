@@ -61,11 +61,13 @@ Completed first persistence slice:
 - Prisma Client generation and schema validation scripts are available.
 - API routes load scheduling data and persist accepted suggestions in PostgreSQL.
 - The UI uses PostgreSQL when configured and falls back to local demo persistence when unavailable.
+- The accept endpoint validates required participant availability/conflicts and selected room availability/conflicts before writing accepted events.
+- Database-backed slot calculation now stores event requests, schedule runs, and schedule suggestions, and accepting a stored suggestion links the accepted event back to its event request.
+- Local PostgreSQL workflow added with Docker Compose, root database scripts, and setup documentation.
+- The event update endpoint validates drag/resize updates against required participant and room constraints before persisting changes.
 
 Remaining:
-- Decide local PostgreSQL workflow for contributors.
-- Add conflict-aware validation in the accept endpoint before writing calendar events.
-- Store event requests and schedule runs for accepted suggestions.
+- Add explicit API integration tests for database-backed scheduling endpoints.
 
 ## Phase 3: Scheduling Engine MVP
 
