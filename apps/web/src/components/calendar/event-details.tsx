@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { CalendarEvent, RoomResource, TeamMember } from "@/scheduling";
+import { eventVariant } from "./lib/event-variant";
 import { formatEventWhen } from "./lib/format";
 
 const POPOVER_WIDTH = 280;
@@ -114,18 +115,13 @@ export function EventDetails({
 
         <span
           className={`mt-2 inline-block rounded px-2 py-0.5 text-xs font-medium ${
-            event.source === "accepted"
-              ? "bg-[#e8f3ee] text-[#1f6f5b]"
-              : event.source === "suggestion"
-                ? "bg-[#fff7e6] text-[#7a4a08]"
-              : "bg-[#eef1f5] text-[#3c4656]"
+            {
+              accepted: "bg-[#e8f3ee] text-[#1f6f5b]",
+              suggestion: "bg-[#fff7e6] text-[#7a4a08]",
+            }[eventVariant(event)]
           }`}
         >
-          {event.source === "accepted"
-            ? "Accepted"
-            : event.source === "suggestion"
-              ? "Suggestion"
-              : "Seeded"}
+          {{ accepted: "Accepted", suggestion: "Suggestion" }[eventVariant(event)]}
         </span>
 
         <dl className="mt-3 grid gap-2.5 text-sm">
@@ -164,14 +160,14 @@ export function EventDetails({
           </div>
         </dl>
 
-        {event.source === "accepted" && onDelete ? (
+        {!event.preview && onDelete ? (
           <div className="mt-4 border-t border-[#e3e8ef] pt-3">
             <button
               className="h-9 w-full rounded-md border border-[#e5484d] px-3 text-sm font-semibold text-[#a3262b] hover:bg-[#fbeaea]"
               onClick={() => onDelete(event)}
               type="button"
             >
-              Termin löschen
+              Delete event
             </button>
           </div>
         ) : null}

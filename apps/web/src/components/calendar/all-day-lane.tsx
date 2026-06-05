@@ -7,6 +7,7 @@ import {
 } from "react";
 import type { CalendarEvent } from "@/scheduling";
 import { GUTTER_PX } from "./lib/dimensions";
+import { eventVariant, type CalendarEventVariant } from "./lib/event-variant";
 import { packAllDayRows } from "./lib/layout";
 import { addDays } from "./lib/range";
 
@@ -15,9 +16,8 @@ const ROW_GAP = 4;
 const subscribeNoop = () => () => {};
 const getHydratedSnapshot = () => true;
 const getServerHydratedSnapshot = () => false;
-const variantStyles: Record<CalendarEvent["source"], string> = {
+const variantStyles: Record<CalendarEventVariant, string> = {
   accepted: "border border-[#bcdccd] bg-[#e8f3ee] text-[#1c5345]",
-  seed: "border border-[#d5dce5] bg-[#eef1f5] text-[#3c4656]",
   suggestion:
     "border border-dashed border-[#d99a32] bg-[#fff7e6] text-[#7a4a08]",
 };
@@ -91,7 +91,7 @@ export function AllDayLane({
               widthPercent,
             };
 
-            return placement.event.source === "accepted" ? (
+            return !placement.event.preview ? (
               <AcceptedAllDayBar
                 {...placementProps}
                 key={placement.event.id}
@@ -159,7 +159,7 @@ function StaticAllDayBar({
   return (
     <button
       className={`absolute flex items-center overflow-hidden rounded px-2 text-left text-[11px] font-medium transition hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1f6f5b] ${
-        variantStyles[event.source]
+        variantStyles[eventVariant(event)]
       } ${isSelected ? "ring-2 ring-[#1f6f5b]" : ""}`}
       onClick={(clickEvent) =>
         onSelect(event, clickEvent.currentTarget.getBoundingClientRect())
@@ -285,7 +285,7 @@ function AcceptedAllDayBar({
   return (
     <button
       className={`absolute flex items-center overflow-hidden rounded px-2 text-left text-[11px] font-medium transition hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-[#1f6f5b] ${
-        variantStyles[event.source]
+        variantStyles[eventVariant(event)]
       } ${isSelected ? "ring-2 ring-[#1f6f5b]" : ""}`}
       onClick={(clickEvent) =>
         onSelect(event, clickEvent.currentTarget.getBoundingClientRect())

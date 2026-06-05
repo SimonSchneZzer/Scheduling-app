@@ -411,7 +411,6 @@ export function CalendarView({
 
       <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-[#687385]">
         <LegendSwatch className="border-[#1f6f5b] bg-[#e8f3ee]" label="Accepted" />
-        <LegendSwatch className="border-[#c2ccd9] bg-[#eef1f5]" label="Seeded" />
         <LegendSwatch
           className="border-[#d99a32] bg-[#fff7e6]"
           label="Suggestion"
@@ -421,8 +420,8 @@ export function CalendarView({
           Current time
         </span>
         <span className="text-[#9aa4b2]">
-          Tipp: Termin ziehen zum Verschieben · unten ziehen zum Resizen · in
-          freien Slot ziehen für neuen Termin.
+          Tip: drag an event to move it · drag the bottom edge to resize · drag
+          across an empty slot to create one.
         </span>
       </div>
 

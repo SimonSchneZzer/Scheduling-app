@@ -6,7 +6,7 @@ function event(start: string, end: string): CalendarEvent {
   return {
     id: "e",
     title: "Event",
-    source: "seed",
+    source: "accepted",
     participantIds: [],
     start: new Date(start),
     end: new Date(end),

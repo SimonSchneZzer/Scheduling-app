@@ -3,6 +3,7 @@
 import { useDraggable } from "@dnd-kit/core";
 import { useSyncExternalStore, type PointerEvent as ReactPointerEvent } from "react";
 import type { CalendarEvent } from "@/scheduling";
+import { eventVariant, type CalendarEventVariant } from "./lib/event-variant";
 import { formatTimeRange } from "./lib/format";
 import { dateFromGridOffset } from "./lib/layout";
 
@@ -35,9 +36,8 @@ type EventBlockProps = {
   onResizeEnd?: () => void;
 };
 
-const variantStyles: Record<CalendarEvent["source"], string> = {
+const variantStyles: Record<CalendarEventVariant, string> = {
   accepted: "border-l-[3px] border-[#1f6f5b] bg-[#e8f3ee] text-[#1c5345]",
-  seed: "border-l-[3px] border-[#c2ccd9] bg-[#eef1f5] text-[#3c4656]",
   suggestion:
     "border-l-[3px] border-[#b7791f] bg-[#fff7e6] text-[#7a4a08] outline outline-1 outline-dashed outline-[#d99a32]",
 };
@@ -123,7 +123,7 @@ export function EventBlock({
   return (
     <div
       className={`absolute overflow-hidden rounded-md shadow-sm transition focus-within:ring-2 focus-within:ring-[#1f6f5b] ${
-        variantStyles[event.source]
+        variantStyles[eventVariant(event)]
       } ${isSelected ? "ring-2 ring-[#1f6f5b]" : ""}`}
       ref={setNodeRef}
       style={{

@@ -8,7 +8,7 @@ export type EventType = "timed" | "all-day" | "multi-day";
 
 export type ResourceFeature = "whiteboard" | "screen" | "video";
 
-export type CalendarEventSource = "seed" | "accepted" | "suggestion";
+export type CalendarEventSource = "accepted";
 
 export type TimeWindow = {
   start: Date;
@@ -29,6 +29,8 @@ export type CalendarEvent = {
   id: string;
   title: string;
   source: CalendarEventSource;
+  /** UI-only marker for unsaved suggestion previews; never persisted. */
+  preview?: boolean;
   participantIds: string[];
   resourceId?: string;
   start: Date;

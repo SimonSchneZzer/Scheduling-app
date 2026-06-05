@@ -261,8 +261,9 @@ export function SchedulingDashboard() {
     setPendingSuggestionEvents(
       suggestions.map((suggestion, index) => ({
         id: `suggestion-${suggestion.start.toISOString()}-${index}`,
-        title: `${request.title} Vorschlag ${index + 1}`,
-        source: "suggestion",
+        title: `${request.title} · Suggestion ${index + 1}`,
+        source: "accepted",
+        preview: true,
         participantIds: request.eventRequest.participants.map(
           (participant) => participant.id,
         ),
@@ -351,8 +352,8 @@ export function SchedulingDashboard() {
   }
 
   async function deleteEvent(target: CalendarEvent) {
-    if (target.source !== "accepted") {
-      setDataError("Seed-Termine können im Demo-Modus nicht gelöscht werden.");
+    if (target.preview) {
+      setDataError("Suggestion previews cannot be deleted.");
       return;
     }
 
@@ -390,8 +391,8 @@ export function SchedulingDashboard() {
   }
 
   async function handleEventMove({ event, start, end }: CalendarMovePayload) {
-    if (event.source !== "accepted") {
-      setDataError("Seed-Termine sind im Demo-Modus nicht verschiebbar.");
+    if (event.preview) {
+      setDataError("Suggestion previews cannot be moved.");
       return;
     }
     setDataError(null);
@@ -410,8 +411,8 @@ export function SchedulingDashboard() {
   }
 
   async function handleEventResize({ event, start, end }: CalendarResizePayload) {
-    if (event.source !== "accepted") {
-      setDataError("Seed-Termine sind im Demo-Modus nicht resizebar.");
+    if (event.preview) {
+      setDataError("Suggestion previews cannot be resized.");
       return;
     }
     setDataError(null);

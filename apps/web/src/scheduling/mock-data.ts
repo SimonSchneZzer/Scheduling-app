@@ -119,7 +119,7 @@ function calendarEvent(
   return {
     id,
     title,
-    source: "seed",
+    source: "accepted",
     participantIds,
     resourceId,
     start: new Date(start),

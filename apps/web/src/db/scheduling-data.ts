@@ -14,7 +14,6 @@ import type {
 } from "@/scheduling";
 import type {
   CalendarEvent,
-  CalendarEventSource,
   ParticipantAvailability,
   ParticipantRole,
   Priority,
@@ -40,7 +39,6 @@ export class ScheduleSuggestionNotFoundError extends Error {
 }
 
 type PrismaParticipantRole = "REQUIRED" | "OPTIONAL";
-type PrismaCalendarEventSource = "SEED" | "ACCEPTED";
 type PrismaPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
 type PrismaEventMode = "OFFLINE" | "ONLINE";
 type PrismaEventType = "TIMED" | "ALL_DAY" | "MULTI_DAY";
@@ -104,7 +102,7 @@ export async function loadSchedulingData(): Promise<SchedulingData> {
     calendarEvents: calendarEvents.map<CalendarEvent>((event) => ({
       id: event.id,
       title: event.title,
-      source: mapCalendarEventSource(event.source),
+      source: "accepted",
       participantIds: event.participants.map((participant) => participant.userId),
       resourceId: event.roomId ?? undefined,
       start: event.start,
@@ -477,11 +475,6 @@ function mapParticipantRoleToPrisma(role: ParticipantRole): PrismaParticipantRol
   return role === "required" ? "REQUIRED" : "OPTIONAL";
 }
 
-function mapCalendarEventSource(
-  source: PrismaCalendarEventSource,
-): CalendarEventSource {
-  return source === "ACCEPTED" ? "accepted" : "seed";
-}
 
 function mapPriorityToPrisma(priority: Priority): PrismaPriority {
   return priority.toUpperCase() as PrismaPriority;
