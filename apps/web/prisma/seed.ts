@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
+import { initialCalendarEvents } from "../src/scheduling/mock-data";
 
 const adapter = new PrismaPg({
   connectionString: requireDatabaseUrl(),
@@ -77,46 +78,6 @@ const participantAvailability = [
     ],
   },
 ];
-
-const seedEvents = [
-  // Monday
-  event("calendar-standup", "Daily standup", "2026-06-08T09:00:00", "2026-06-08T09:30:00", ["mara", "simon", "lea", "jonas"], "room-a"),
-  event("calendar-customer-call", "Customer call", "2026-06-08T11:00:00", "2026-06-08T11:45:00", ["simon"]),
-  event("calendar-hiring-sync", "Hiring sync", "2026-06-08T11:15:00", "2026-06-08T12:00:00", ["mara", "jonas"], "room-b"),
-  event("calendar-design-review", "Design review", "2026-06-08T13:30:00", "2026-06-08T14:30:00", ["lea"]),
-  event("calendar-1on1", "1:1 Mara · Simon", "2026-06-08T15:00:00", "2026-06-08T15:30:00", ["mara", "simon"], "room-b"),
-
-  // Tuesday
-  event("calendar-standup-tue", "Daily standup", "2026-06-09T09:00:00", "2026-06-09T09:30:00", ["mara", "simon", "lea", "jonas"], "room-a"),
-  event("calendar-sprint-planning", "Sprint planning", "2026-06-09T10:00:00", "2026-06-09T11:30:00", ["mara", "simon", "lea", "jonas"], "workshop-room"),
-  event("calendar-lunch-learn", "Lunch & learn", "2026-06-09T12:30:00", "2026-06-09T13:15:00", ["lea", "jonas"], "room-b"),
-  event("calendar-design-critique", "Design critique", "2026-06-09T15:00:00", "2026-06-09T16:00:00", ["mara", "lea"], "room-a"),
-
-  // Wednesday (+ multi-day offsite spanning into Thursday)
-  event("calendar-standup-wed", "Daily standup", "2026-06-10T09:00:00", "2026-06-10T09:30:00", ["mara", "simon", "lea", "jonas"], "room-a"),
-  event("calendar-offsite", "Team offsite", "2026-06-10T00:00:00", "2026-06-12T00:00:00", ["mara", "simon", "lea", "jonas"], "workshop-room"),
-  event("calendar-roadmap-sync", "Roadmap sync", "2026-06-10T14:00:00", "2026-06-10T15:00:00", ["mara", "simon"], "room-b"),
-
-  // Thursday
-  event("calendar-standup-thu", "Daily standup", "2026-06-11T09:00:00", "2026-06-11T09:30:00", ["mara", "simon", "lea", "jonas"], "room-a"),
-  event("calendar-customer-demo", "Customer demo", "2026-06-11T14:00:00", "2026-06-11T15:00:00", ["mara", "simon"], "room-b"),
-
-  // Friday
-  event("calendar-standup-fri", "Daily standup", "2026-06-12T09:00:00", "2026-06-12T09:30:00", ["mara", "simon", "lea", "jonas"], "room-a"),
-  event("calendar-focus-friday", "Focus Friday", "2026-06-12T00:00:00", "2026-06-13T00:00:00", ["mara", "simon", "lea", "jonas"]),
-  event("calendar-retro", "Team retro", "2026-06-12T15:00:00", "2026-06-12T16:00:00", ["mara", "simon", "lea", "jonas"], "workshop-room"),
-];
-
-function event(
-  id: string,
-  title: string,
-  start: string,
-  end: string,
-  participantIds: string[],
-  roomId?: string,
-) {
-  return { id, title, participantIds, roomId, start, end };
-}
 
 async function main() {
   await prisma.team.upsert({
@@ -203,23 +164,23 @@ async function main() {
     });
   }
 
-  for (const event of seedEvents) {
+  for (const event of initialCalendarEvents) {
     await prisma.calendarEvent.upsert({
       where: { id: event.id },
       create: {
         id: event.id,
         calendarId,
         title: event.title,
-        source: "SEED",
-        roomId: event.roomId,
-        start: new Date(event.start),
-        end: new Date(event.end),
+        source: "ACCEPTED",
+        roomId: event.resourceId,
+        start: event.start,
+        end: event.end,
       },
       update: {
         title: event.title,
-        roomId: event.roomId,
-        start: new Date(event.start),
-        end: new Date(event.end),
+        roomId: event.resourceId,
+        start: event.start,
+        end: event.end,
       },
     });
 
@@ -236,7 +197,9 @@ async function main() {
     });
   }
 
-  console.log("Seeded scheduling demo data.");
+  console.log(
+    `Seeded scheduling data: reference data + ${initialCalendarEvents.length} calendar events.`,
+  );
 }
 
 function window(start: string, end: string) {

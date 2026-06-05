@@ -5,6 +5,7 @@ import { generateScheduleSuggestions } from "@/scheduling/engine";
 import type {
   AcceptSuggestionRequest,
   CreateScheduleRunRequest,
+  ScheduleRunHistoryItem,
   ScheduleRunResponse,
   SchedulingData,
   StoredScheduleSuggestion,
@@ -13,7 +14,6 @@ import type {
 } from "@/scheduling";
 import type {
   CalendarEvent,
-  CalendarEventSource,
   ParticipantAvailability,
   ParticipantRole,
   Priority,
@@ -39,7 +39,6 @@ export class ScheduleSuggestionNotFoundError extends Error {
 }
 
 type PrismaParticipantRole = "REQUIRED" | "OPTIONAL";
-type PrismaCalendarEventSource = "SEED" | "ACCEPTED";
 type PrismaPriority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
 type PrismaEventMode = "OFFLINE" | "ONLINE";
 type PrismaEventType = "TIMED" | "ALL_DAY" | "MULTI_DAY";
@@ -103,7 +102,7 @@ export async function loadSchedulingData(): Promise<SchedulingData> {
     calendarEvents: calendarEvents.map<CalendarEvent>((event) => ({
       id: event.id,
       title: event.title,
-      source: mapCalendarEventSource(event.source),
+      source: "accepted",
       participantIds: event.participants.map((participant) => participant.userId),
       resourceId: event.roomId ?? undefined,
       start: event.start,
@@ -190,6 +189,42 @@ export async function createScheduleRun(
       mapStoredScheduleSuggestion(suggestion, schedulingData.rooms),
     ),
   };
+}
+
+export async function loadScheduleRunHistory(): Promise<ScheduleRunHistoryItem[]> {
+  const prisma = getPrismaClient();
+  const runs = await prisma.scheduleRun.findMany({
+    where: {
+      eventRequest: { teamId: DEMO_TEAM_ID },
+    },
+    include: {
+      eventRequest: {
+        include: {
+          acceptedEvents: {
+            select: { id: true },
+            orderBy: { createdAt: "desc" },
+            take: 1,
+          },
+        },
+      },
+      suggestions: {
+        select: { score: true },
+        orderBy: { score: "desc" },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 12,
+  });
+
+  return runs.map((run) => ({
+    id: run.id,
+    eventRequestId: run.eventRequestId,
+    title: run.eventRequest.title,
+    createdAt: run.createdAt,
+    suggestionCount: run.suggestions.length,
+    topScore: run.suggestions[0]?.score,
+    acceptedEventId: run.eventRequest.acceptedEvents[0]?.id,
+  }));
 }
 
 export async function acceptStoredScheduleSuggestion(
@@ -371,6 +406,35 @@ export async function updateAcceptedCalendarEvent(
   };
 }
 
+export async function deleteAcceptedCalendarEvent(
+  id: string,
+): Promise<CalendarEvent | null> {
+  const prisma = getPrismaClient();
+  const existing = await prisma.calendarEvent.findUnique({
+    where: { id },
+    include: { participants: true },
+  });
+
+  if (!existing || existing.source !== "ACCEPTED") {
+    return null;
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.roomBooking.deleteMany({ where: { calendarEventId: id } });
+    await tx.calendarEvent.delete({ where: { id } });
+  });
+
+  return {
+    id: existing.id,
+    title: existing.title,
+    source: "accepted",
+    participantIds: existing.participants.map((participant) => participant.userId),
+    resourceId: existing.roomId ?? undefined,
+    start: existing.start,
+    end: existing.end,
+  };
+}
+
 export async function deleteAcceptedCalendarEvents() {
   const prisma = getPrismaClient();
 
@@ -411,11 +475,6 @@ function mapParticipantRoleToPrisma(role: ParticipantRole): PrismaParticipantRol
   return role === "required" ? "REQUIRED" : "OPTIONAL";
 }
 
-function mapCalendarEventSource(
-  source: PrismaCalendarEventSource,
-): CalendarEventSource {
-  return source === "ACCEPTED" ? "accepted" : "seed";
-}
 
 function mapPriorityToPrisma(priority: Priority): PrismaPriority {
   return priority.toUpperCase() as PrismaPriority;

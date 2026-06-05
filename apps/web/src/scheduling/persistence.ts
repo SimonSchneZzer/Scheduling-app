@@ -16,7 +16,7 @@ export function serializeAcceptedEvents(events: CalendarEvent[]) {
   const payload: StoredAcceptedEvents = {
     version: STORAGE_VERSION,
     events: events
-      .filter((event) => event.source === "accepted")
+      .filter((event) => !event.preview)
       .map((event) => ({
         ...event,
         start: event.start.toISOString(),

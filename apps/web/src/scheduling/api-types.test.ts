@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  deserializeScheduleRunHistory,
   deserializeScheduleRunResponse,
   deserializeSchedulingData,
+  serializeScheduleRunHistory,
   serializeScheduleRunResponse,
   serializeSchedulingData,
 } from "./api-types";
@@ -67,6 +69,25 @@ describe("scheduling API serialization", () => {
     expect(deserialized.suggestions[0]?.start).toBeInstanceOf(Date);
     expect(deserialized.suggestions[0]?.id).toBe("suggestion-1");
   });
+
+  it("serializes and deserializes schedule run history timestamps", () => {
+    const serialized = serializeScheduleRunHistory([
+      {
+        id: "run-1",
+        eventRequestId: "request-1",
+        title: "Planning",
+        createdAt: new Date("2026-06-08T10:00:00.000Z"),
+        suggestionCount: 3,
+        topScore: 65,
+        acceptedEventId: "accepted-1",
+      },
+    ]);
+    const deserialized = deserializeScheduleRunHistory(serialized);
+
+    expect(serialized[0]?.createdAt).toBe("2026-06-08T10:00:00.000Z");
+    expect(deserialized[0]?.createdAt).toBeInstanceOf(Date);
+    expect(deserialized[0]?.acceptedEventId).toBe("accepted-1");
+  });
 });
 
 function createSchedulingData(): SchedulingData {
@@ -107,7 +128,7 @@ function createSchedulingData(): SchedulingData {
       {
         id: "calendar-standup",
         title: "Daily standup",
-        source: "seed",
+        source: "accepted",
         participantIds: ["mara"],
         resourceId: "room-a",
         start: new Date("2026-06-08T10:00:00.000Z"),

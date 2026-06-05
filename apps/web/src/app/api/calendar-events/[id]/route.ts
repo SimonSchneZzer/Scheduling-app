@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import {
   CalendarEventValidationError,
+  deleteAcceptedCalendarEvent,
   updateAcceptedCalendarEvent,
 } from "@/db/scheduling-data";
-import type { UpdateCalendarEventRequest } from "@/scheduling";
+import { isUpdateCalendarEventRequest } from "@/scheduling";
 
 export async function PATCH(
   request: Request,
@@ -60,30 +61,33 @@ export async function PATCH(
   }
 }
 
-function isUpdateCalendarEventRequest(
-  value: unknown,
-): value is UpdateCalendarEventRequest {
-  if (!isRecord(value)) {
-    return false;
+export async function DELETE(
+  _request: Request,
+  context: { params: Promise<{ id: string }> },
+) {
+  const { id } = await context.params;
+
+  try {
+    const event = await deleteAcceptedCalendarEvent(id);
+
+    if (!event) {
+      return NextResponse.json(
+        { error: "Calendar event not found or not editable." },
+        { status: 404 },
+      );
+    }
+
+    return NextResponse.json({
+      ...event,
+      start: event.start.toISOString(),
+      end: event.end.toISOString(),
+    });
+  } catch (error) {
+    console.error(error);
+
+    return NextResponse.json(
+      { error: "Calendar event could not be deleted." },
+      { status: 503 },
+    );
   }
-
-  return (
-    typeof value.start === "string" &&
-    isValidDate(value.start) &&
-    typeof value.end === "string" &&
-    isValidDate(value.end) &&
-    new Date(value.start) < new Date(value.end) &&
-    (value.resourceId === undefined ||
-      value.resourceId === null ||
-      typeof value.resourceId === "string") &&
-    (value.title === undefined || typeof value.title === "string")
-  );
-}
-
-function isValidDate(value: string) {
-  return !Number.isNaN(new Date(value).getTime());
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
 }

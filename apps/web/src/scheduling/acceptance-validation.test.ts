@@ -228,7 +228,7 @@ function createSchedulingData(
       {
         id: "standup",
         title: "Standup",
-        source: "seed",
+        source: "accepted",
         participantIds: ["mara"],
         resourceId: "room-a",
         start: new Date("2026-06-08T09:00:00.000Z"),

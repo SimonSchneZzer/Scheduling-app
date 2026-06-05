@@ -15,10 +15,11 @@ const acceptedEvent: CalendarEvent = {
   end: new Date("2026-06-08T10:45:00.000Z"),
 };
 
-const seedEvent: CalendarEvent = {
-  id: "seed-1",
-  title: "Standup",
-  source: "seed",
+const previewEvent: CalendarEvent = {
+  id: "preview-1",
+  title: "Standup · Suggestion 1",
+  source: "accepted",
+  preview: true,
   participantIds: ["mara"],
   start: new Date("2026-06-08T09:00:00.000Z"),
   end: new Date("2026-06-08T09:30:00.000Z"),
@@ -35,9 +36,9 @@ describe("accepted event persistence", () => {
     expect(restored[0]?.end).toBeInstanceOf(Date);
   });
 
-  it("does not serialize seed events", () => {
+  it("does not serialize suggestion preview events", () => {
     const restored = deserializeAcceptedEvents(
-      serializeAcceptedEvents([seedEvent, acceptedEvent]),
+      serializeAcceptedEvents([previewEvent, acceptedEvent]),
     );
 
     expect(restored).toEqual([acceptedEvent]);

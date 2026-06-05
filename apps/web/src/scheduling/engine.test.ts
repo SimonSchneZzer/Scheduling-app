@@ -133,7 +133,7 @@ describe("generateScheduleSuggestions", () => {
       {
         id: "existing-1",
         title: "Existing meeting",
-        source: "seed",
+        source: "accepted",
         participantIds: ["required-1"],
         start: date("2026-06-08T09:00:00.000Z"),
         end: date("2026-06-08T09:30:00.000Z"),
@@ -166,7 +166,7 @@ describe("generateScheduleSuggestions", () => {
         {
           id: "optional-conflict",
           title: "Optional conflict",
-          source: "seed",
+          source: "accepted",
           participantIds: ["optional-1"],
           start: date("2026-06-08T09:00:00.000Z"),
           end: date("2026-06-08T09:30:00.000Z"),
@@ -316,7 +316,7 @@ describe("generateScheduleSuggestions", () => {
         {
           id: "room-booking",
           title: "Room booking",
-          source: "seed",
+          source: "accepted",
           participantIds: [],
           resourceId: "room-a",
           start: date("2026-06-08T09:00:00.000Z"),
@@ -446,7 +446,7 @@ describe("generateScheduleSuggestions", () => {
         {
           id: "required-day-conflict",
           title: "Required conflict",
-          source: "seed",
+          source: "accepted",
           participantIds: ["required-1"],
           start: date("2026-06-08T13:00:00.000Z"),
           end: date("2026-06-08T14:00:00.000Z"),
@@ -525,7 +525,7 @@ describe("generateScheduleSuggestions", () => {
         {
           id: "optional-day-conflict",
           title: "Optional conflict",
-          source: "seed",
+          source: "accepted",
           participantIds: ["optional-1"],
           start: date("2026-06-08T13:00:00.000Z"),
           end: date("2026-06-08T14:00:00.000Z"),

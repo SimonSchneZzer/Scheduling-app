@@ -26,7 +26,6 @@ import { addDays, isSameDay, startOfDay, weekDays } from "./lib/range";
 
 const DAYS_PER_WEEK = 7;
 const NOW_REFRESH_MS = 60_000;
-
 type SelectedEvent = {
   event: CalendarEvent;
   rect: DOMRect;
@@ -40,32 +39,40 @@ export type CalendarMovePayload = {
 
 export type CalendarResizePayload = {
   event: CalendarEvent;
+  start?: Date;
   end: Date;
 };
 
 type CalendarViewProps = {
   events: CalendarEvent[];
+  suggestionEvents?: CalendarEvent[];
   rooms: RoomResource[];
   teamMembers: TeamMember[];
   /** Week to open on; defaults to the current week. */
   initialDate?: Date;
   onEventMove?: (payload: CalendarMovePayload) => void;
   onEventResize?: (payload: CalendarResizePayload) => void;
+  onEventDelete?: (event: CalendarEvent) => void;
   onRangeCreate?: (range: { start: Date; end: Date }) => void;
 };
 
 export function CalendarView({
   events,
+  suggestionEvents = [],
   rooms,
   teamMembers,
   initialDate,
   onEventMove,
   onEventResize,
+  onEventDelete,
   onRangeCreate,
 }: CalendarViewProps) {
   const [anchorDate, setAnchorDate] = useState<Date>(
     () => initialDate ?? startOfDay(new Date()),
   );
+  const [viewMode, setViewMode] = useState<"week" | "day">("week");
+  const [participantFilter, setParticipantFilter] = useState("");
+  const [roomFilter, setRoomFilter] = useState("");
   const [now, setNow] = useState<Date | null>(null);
   const [selected, setSelected] = useState<SelectedEvent | null>(null);
 
@@ -85,17 +92,39 @@ export function CalendarView({
     };
   }, []);
 
-  const days = useMemo(() => weekDays(anchorDate), [anchorDate]);
+  const days = useMemo(
+    () => (viewMode === "week" ? weekDays(anchorDate) : [startOfDay(anchorDate)]),
+    [anchorDate, viewMode],
+  );
+  const dayCount = days.length;
+  const allEvents = useMemo(
+    () => [...events, ...suggestionEvents],
+    [events, suggestionEvents],
+  );
+  const filteredEvents = useMemo(() => {
+    return allEvents.filter((event) => {
+      const matchesParticipant =
+        participantFilter === "" ||
+        event.participantIds.includes(participantFilter);
+      const matchesRoom =
+        roomFilter === "" ||
+        (roomFilter === "online"
+          ? event.resourceId === undefined
+          : event.resourceId === roomFilter);
+
+      return matchesParticipant && matchesRoom;
+    });
+  }, [allEvents, participantFilter, roomFilter]);
 
   const visibleEvents = useMemo(() => {
     const weekStart = days[0].getTime();
-    const weekEnd = addDays(days[DAYS_PER_WEEK - 1], 1).getTime();
+    const weekEnd = addDays(days[dayCount - 1], 1).getTime();
 
-    return events.filter(
+    return filteredEvents.filter(
       (event) =>
         event.start.getTime() < weekEnd && event.end.getTime() > weekStart,
     );
-  }, [days, events]);
+  }, [dayCount, days, filteredEvents]);
 
   const { allDay, timed } = useMemo(
     () => splitEvents(visibleEvents),
@@ -160,13 +189,27 @@ export function CalendarView({
     }
 
     const overData = dragEvent.over?.data.current as
-      | { day?: Date }
+      | { day?: Date; allDay?: boolean }
       | undefined;
     const targetDay = overData?.day;
+    const allDayTarget = overData?.allDay === true;
     const activeRect = dragEvent.active.rect.current.translated;
     const overRect = dragEvent.over?.rect;
 
-    if (!targetDay || !activeRect || !overRect) {
+    if (!targetDay) {
+      return;
+    }
+
+    if (allDayTarget) {
+      const duration =
+        interaction.originalEnd.getTime() - interaction.originalStart.getTime();
+      const newStart = startOfDay(targetDay);
+      const newEnd = new Date(newStart.getTime() + duration);
+      updateMove(newStart, newEnd);
+      return;
+    }
+
+    if (!activeRect || !overRect) {
       return;
     }
 
@@ -220,10 +263,17 @@ export function CalendarView({
     if (!event) {
       return;
     }
-    if (event.end.getTime() === snapshot.end.getTime()) {
+    if (event.start.getTime() === snapshot.start.getTime() && event.end.getTime() === snapshot.end.getTime()) {
       return;
     }
-    onEventResize?.({ event, end: snapshot.end });
+    onEventResize?.({ event, start: snapshot.start, end: snapshot.end });
+  }
+
+  function handleAllDayResize(event: CalendarEvent, start: Date, end: Date) {
+    if (event.start.getTime() === start.getTime() && event.end.getTime() === end.getTime()) {
+      return;
+    }
+    onEventResize?.({ event, start, end });
   }
 
   function handleCreateEnd() {
@@ -235,31 +285,49 @@ export function CalendarView({
   }
 
   const todayIndex = now ? days.findIndex((day) => isSameDay(day, now)) : -1;
+  const rangeLabel =
+    viewMode === "week" ? formatWeekRangeLabel(days) : formatDayRangeLabel(days[0]);
+  const navStepDays = viewMode === "week" ? DAYS_PER_WEEK : 1;
 
   return (
     <section className="rounded-lg border border-[#d9dee7] bg-white p-4">
       <CalendarHeader
         eventCount={visibleEvents.length}
+        participantFilter={participantFilter}
+        participantOptions={teamMembers}
         onNext={() => {
           clearSelection();
           cancel();
-          setAnchorDate((current) => addDays(current, DAYS_PER_WEEK));
+          setAnchorDate((current) => addDays(current, navStepDays));
         }}
         onPrev={() => {
           clearSelection();
           cancel();
-          setAnchorDate((current) => addDays(current, -DAYS_PER_WEEK));
+          setAnchorDate((current) => addDays(current, -navStepDays));
         }}
+        onParticipantFilterChange={setParticipantFilter}
+        onRoomFilterChange={setRoomFilter}
         onToday={() => {
           clearSelection();
           cancel();
           setAnchorDate(startOfDay(now ?? new Date()));
         }}
-        rangeLabel={formatWeekRangeLabel(days)}
+        onViewModeChange={(mode) => {
+          clearSelection();
+          cancel();
+          setViewMode(mode);
+          setAnchorDate((current) =>
+            mode === "week" ? startOfDay(current) : startOfDay(current),
+          );
+        }}
+        rangeLabel={rangeLabel}
+        roomFilter={roomFilter}
+        roomOptions={rooms}
+        viewMode={viewMode}
       />
 
       <div className="mt-4 overflow-x-auto rounded-md border border-[#e3e8ef]">
-        <div style={{ minWidth: GUTTER_PX + DAYS_PER_WEEK * DAY_MIN_PX }}>
+        <div style={{ minWidth: GUTTER_PX + dayCount * DAY_MIN_PX }}>
           <div className="flex border-b border-[#e3e8ef] bg-white">
             <div className="shrink-0" style={{ width: GUTTER_PX }} />
             <div className="flex flex-1">
@@ -294,21 +362,22 @@ export function CalendarView({
             </div>
           </div>
 
-          <AllDayLane
-            allDayEvents={allDay}
-            onSelect={selectEvent}
-            selectedEventId={selected?.event.id ?? null}
-            weekDays={days}
-          />
+          <DndContext
+            sensors={sensors}
+            onDragStart={handleDragStart}
+            onDragMove={handleDragMove}
+            onDragEnd={handleDragEnd}
+            onDragCancel={() => cancel()}
+          >
+            <AllDayLane
+              allDayEvents={allDay}
+              onResize={handleAllDayResize}
+              onSelect={selectEvent}
+              selectedEventId={selected?.event.id ?? null}
+              weekDays={days}
+            />
 
-          <div className="relative">
-            <DndContext
-              sensors={sensors}
-              onDragStart={handleDragStart}
-              onDragMove={handleDragMove}
-              onDragEnd={handleDragEnd}
-              onDragCancel={() => cancel()}
-            >
+            <div className="relative">
               <TimeGrid
                 endHour={endHour}
                 now={now}
@@ -327,29 +396,32 @@ export function CalendarView({
                 onCreateUpdate={updateCreate}
                 onCreateEnd={handleCreateEnd}
               />
-            </DndContext>
 
-            {visibleEvents.length === 0 && interaction.kind === "idle" ? (
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                <p className="rounded-md bg-white/80 px-3 py-1.5 text-sm text-[#9aa4b2]">
-                  No events scheduled this week.
-                </p>
-              </div>
-            ) : null}
-          </div>
+              {visibleEvents.length === 0 && interaction.kind === "idle" ? (
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                  <p className="rounded-md bg-white/80 px-3 py-1.5 text-sm text-[#9aa4b2]">
+                    Keine Termine in dieser Ansicht.
+                  </p>
+                </div>
+              ) : null}
+            </div>
+          </DndContext>
         </div>
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-4 text-xs text-[#687385]">
         <LegendSwatch className="border-[#1f6f5b] bg-[#e8f3ee]" label="Accepted" />
-        <LegendSwatch className="border-[#c2ccd9] bg-[#eef1f5]" label="Seeded" />
+        <LegendSwatch
+          className="border-[#d99a32] bg-[#fff7e6]"
+          label="Suggestion"
+        />
         <span className="flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full bg-[#e5484d]" />
           Current time
         </span>
         <span className="text-[#9aa4b2]">
-          Tipp: Termin ziehen zum Verschieben · unten ziehen zum Resizen · in
-          freien Slot ziehen für neuen Termin.
+          Tip: drag an event to move it · drag the bottom edge to resize · drag
+          across an empty slot to create one.
         </span>
       </div>
 
@@ -358,6 +430,10 @@ export function CalendarView({
           anchorRect={selected.rect}
           event={selected.event}
           onClose={clearSelection}
+          onDelete={(event) => {
+            clearSelection();
+            onEventDelete?.(event);
+          }}
           rooms={rooms}
           teamMembers={teamMembers}
         />
@@ -379,4 +455,13 @@ function LegendSwatch({
       {label}
     </span>
   );
+}
+
+function formatDayRangeLabel(day: Date) {
+  return new Intl.DateTimeFormat("en", {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(day);
 }

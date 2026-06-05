@@ -277,8 +277,8 @@ function DayColumn({
             dayMidnight={day}
             startHour={startHour}
             endHour={endHour}
-            draggable={event.source === "accepted"}
-            resizable={event.source === "accepted"}
+            draggable={!event.preview}
+            resizable={!event.preview}
             isInteractionSource={isInteractionSource}
             onResizeBegin={onResizeBegin}
             onResizeUpdate={onResizeUpdate}

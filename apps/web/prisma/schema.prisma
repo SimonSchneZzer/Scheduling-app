@@ -31,7 +31,6 @@ enum EventType {
 }
 
 enum CalendarEventSource {
-  SEED     @map("seed")
   ACCEPTED @map("accepted")
 }
 

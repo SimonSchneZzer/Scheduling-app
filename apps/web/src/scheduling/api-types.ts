@@ -69,11 +69,28 @@ export type ScheduleRunResponse = {
   suggestions: StoredScheduleSuggestion[];
 };
 
+export type ScheduleRunHistoryItem = {
+  id: string;
+  eventRequestId: string;
+  title: string;
+  createdAt: Date;
+  suggestionCount: number;
+  topScore?: number;
+  acceptedEventId?: string;
+};
+
 export type SerializedScheduleRunResponse = Omit<
   ScheduleRunResponse,
   "suggestions"
 > & {
   suggestions: SerializedStoredScheduleSuggestion[];
+};
+
+export type SerializedScheduleRunHistoryItem = Omit<
+  ScheduleRunHistoryItem,
+  "createdAt"
+> & {
+  createdAt: string;
 };
 
 export type AcceptSuggestionRequest = {
@@ -158,6 +175,24 @@ export function deserializeScheduleRunResponse(
       end: new Date(suggestion.end),
     })),
   };
+}
+
+export function serializeScheduleRunHistory(
+  runs: ScheduleRunHistoryItem[],
+): SerializedScheduleRunHistoryItem[] {
+  return runs.map((run) => ({
+    ...run,
+    createdAt: run.createdAt.toISOString(),
+  }));
+}
+
+export function deserializeScheduleRunHistory(
+  runs: SerializedScheduleRunHistoryItem[],
+): ScheduleRunHistoryItem[] {
+  return runs.map((run) => ({
+    ...run,
+    createdAt: new Date(run.createdAt),
+  }));
 }
 
 function serializeTimeWindow(window: { start: Date; end: Date }) {

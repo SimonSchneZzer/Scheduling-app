@@ -37,6 +37,10 @@ export type EventSheetProps = {
   onFindSuggestions?: (
     request: CreateScheduleRunRequest,
   ) => Promise<StoredScheduleSuggestion[]>;
+  onSuggestionsPreview?: (
+    request: CreateScheduleRunRequest,
+    suggestions: ScheduleSuggestion[],
+  ) => void;
   onSubmit: (request: AcceptSuggestionRequest) => Promise<void>;
 };
 
@@ -49,6 +53,7 @@ export function EventSheet({
   initialRange,
   onAcceptSuggestion,
   onFindSuggestions,
+  onSuggestionsPreview,
   onSubmit,
 }: EventSheetProps) {
   const initialStart = initialRange?.start;
@@ -147,6 +152,7 @@ export function EventSheet({
             maxSuggestions: 6,
           });
       setSuggestions(next);
+      onSuggestionsPreview?.({ title, eventRequest }, next);
     } catch (error) {
       setSubmitError(
         error instanceof Error
@@ -212,6 +218,7 @@ export function EventSheet({
         end: end.toISOString(),
       });
 
+      onSuggestionsPreview?.({ title, eventRequest }, []);
       onClose();
     } catch (error) {
       setSubmitError(
@@ -235,6 +242,7 @@ export function EventSheet({
 
     try {
       await onAcceptSuggestion({ ...suggestion, id: suggestion.id });
+      onSuggestionsPreview?.({ title, eventRequest }, []);
       onClose();
     } catch (error) {
       setSubmitError(

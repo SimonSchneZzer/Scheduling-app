@@ -128,13 +128,16 @@ Calendar interactions + add-event sheet:
 - Inside the sheet, a collapsible "Besten Slot finden" section runs the scoring engine and applies a ranked suggestion's time/room back into the form.
 - Move and resize persist via a new `PATCH /api/calendar-events/[id]` route, with localStorage fallback for the demo.
 - Conflict warning during drag/resize highlights overlaps with the event's own participants — drop is still allowed.
+- Accepted events can be deleted from the calendar details popover, with database room booking cleanup and local fallback support.
+- Week/day toggle added to the calendar header.
+- Calendar grid can be filtered by participant or room.
+- Pending schedule suggestions render as preview blocks on the grid before accepting.
+- Accepted all-day and multi-day events can be dragged between days and resized from the all-day lane.
+- Schedule run history panel shows persisted requests/runs, suggestion counts, top scores, and accepted status.
 
 Remaining for the calendar UI:
-- Day-view toggle alongside the week view.
-- Filter the grid by room or participant.
-- Render pending suggestions on the grid before accepting.
-- Delete events from the calendar UI.
-- Drag and resize for all-day / multi-day events.
+- Add keyboard and accessibility polish for all-day drag/resize controls.
+- Add API integration tests around delete, schedule-run history, and accepted suggestion flows.
 
 ## Phase 5: Resources And Long Events
 
