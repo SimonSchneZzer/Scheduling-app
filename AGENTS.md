@@ -78,6 +78,10 @@ Use pnpm from the repository root:
 - Generate Prisma Client: `pnpm db:generate`
 - Run database migrations: `pnpm db:migrate`
 - Seed local database: `pnpm db:seed`
+- Start local PostgreSQL: `pnpm db:up`
+- Stop local PostgreSQL: `pnpm db:down`
+- Run migrations and seed local database: `pnpm db:setup`
+- Reset local database: `pnpm db:reset`
 
 ## Coding Guidelines
 

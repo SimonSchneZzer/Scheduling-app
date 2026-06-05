@@ -5,7 +5,9 @@ export {
 } from "./persistence";
 export {
   deserializeSchedulingData,
+  deserializeScheduleRunResponse,
   serializeSchedulingData,
+  serializeScheduleRunResponse,
 } from "./api-types";
 export type {
   CalendarEvent,
@@ -26,9 +28,14 @@ export type {
 } from "./types";
 export type {
   AcceptSuggestionRequest,
+  CreateScheduleRunRequest,
   SchedulingData,
   SerializedCalendarEvent,
+  SerializedScheduleRunResponse,
   SerializedSchedulingData,
+  SerializedStoredScheduleSuggestion,
+  ScheduleRunResponse,
+  StoredScheduleSuggestion,
   TeamMember,
   UpdateCalendarEventRequest,
 } from "./api-types";

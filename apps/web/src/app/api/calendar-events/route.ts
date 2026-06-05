@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { createAcceptedCalendarEvent } from "@/db/scheduling-data";
+import {
+  CalendarEventValidationError,
+  createAcceptedCalendarEvent,
+} from "@/db/scheduling-data";
 import type { AcceptSuggestionRequest, ParticipantRole } from "@/scheduling";
 
 export async function POST(request: Request) {
@@ -27,6 +30,16 @@ export async function POST(request: Request) {
       end: event.end.toISOString(),
     });
   } catch (error) {
+    if (error instanceof CalendarEventValidationError) {
+      return NextResponse.json(
+        {
+          error: "Accepted event violates scheduling constraints.",
+          reasons: error.reasons,
+        },
+        { status: 409 },
+      );
+    }
+
     console.error(error);
 
     return NextResponse.json(

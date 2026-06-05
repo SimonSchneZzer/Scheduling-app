@@ -5,6 +5,7 @@ import { generateScheduleSuggestions } from "@/scheduling";
 import type {
   AcceptSuggestionRequest,
   CalendarEvent,
+  CreateScheduleRunRequest,
   EventMode,
   EventRequest,
   EventType,
@@ -15,6 +16,7 @@ import type {
   ResourceFeature,
   RoomResource,
   ScheduleSuggestion,
+  StoredScheduleSuggestion,
   TeamMember,
 } from "@/scheduling";
 
@@ -31,6 +33,10 @@ export type EventSheetProps = {
   participantAvailability: ParticipantAvailability[];
   existingEvents: CalendarEvent[];
   initialRange?: { start: Date; end: Date };
+  onAcceptSuggestion?: (suggestion: StoredScheduleSuggestion) => Promise<void>;
+  onFindSuggestions?: (
+    request: CreateScheduleRunRequest,
+  ) => Promise<StoredScheduleSuggestion[]>;
   onSubmit: (request: AcceptSuggestionRequest) => Promise<void>;
 };
 
@@ -41,6 +47,8 @@ export function EventSheet({
   participantAvailability,
   existingEvents,
   initialRange,
+  onAcceptSuggestion,
+  onFindSuggestions,
   onSubmit,
 }: EventSheetProps) {
   const initialStart = initialRange?.start;
@@ -71,7 +79,8 @@ export function EventSheet({
     useState<ParticipantSelection>(() => selectionFromTeamMembers(teamMembers));
   const [selectedResourceId, setSelectedResourceId] = useState<string | null>(null);
   const [bestSlotOpen, setBestSlotOpen] = useState(false);
-  const [suggestions, setSuggestions] = useState<ScheduleSuggestion[]>([]);
+  const [suggestions, setSuggestions] = useState<SheetSuggestion[]>([]);
+  const [isFindingSlots, setIsFindingSlots] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -123,15 +132,30 @@ export function EventSheet({
     startTime,
   ]);
 
-  function findBestSlots() {
-    const next = generateScheduleSuggestions({
-      eventRequest,
-      participantAvailability,
-      existingEvents,
-      resources: rooms,
-      maxSuggestions: 6,
-    });
-    setSuggestions(next);
+  async function findBestSlots() {
+    setSubmitError(null);
+    setIsFindingSlots(true);
+
+    try {
+      const next = onFindSuggestions
+        ? await onFindSuggestions({ title, eventRequest })
+        : generateScheduleSuggestions({
+            eventRequest,
+            participantAvailability,
+            existingEvents,
+            resources: rooms,
+            maxSuggestions: 6,
+          });
+      setSuggestions(next);
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : "Vorschläge konnten nicht berechnet werden.",
+      );
+    } finally {
+      setIsFindingSlots(false);
+    }
   }
 
   function applySuggestion(suggestion: ScheduleSuggestion) {
@@ -194,6 +218,29 @@ export function EventSheet({
         error instanceof Error
           ? error.message
           : "Termin konnte nicht erstellt werden.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleSuggestionAction(suggestion: SheetSuggestion) {
+    if (!suggestion.id || !onAcceptSuggestion) {
+      applySuggestion(suggestion);
+      return;
+    }
+
+    setSubmitError(null);
+    setIsSubmitting(true);
+
+    try {
+      await onAcceptSuggestion({ ...suggestion, id: suggestion.id });
+      onClose();
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error
+          ? error.message
+          : "Vorschlag konnte nicht akzeptiert werden.",
       );
     } finally {
       setIsSubmitting(false);
@@ -495,10 +542,11 @@ export function EventSheet({
               </p>
               <button
                 className="h-9 rounded-md bg-[#1f6f5b] px-3 text-sm font-semibold text-white"
+                disabled={isFindingSlots}
                 onClick={findBestSlots}
                 type="button"
               >
-                Berechnen
+                {isFindingSlots ? "Berechnet…" : "Berechnen"}
               </button>
 
               {suggestions.length > 0 ? (
@@ -526,10 +574,10 @@ export function EventSheet({
                       </span>
                       <button
                         className="h-9 rounded-md border border-[#1f6f5b] px-2 text-xs font-semibold text-[#1f6f5b]"
-                        onClick={() => applySuggestion(suggestion)}
+                        onClick={() => handleSuggestionAction(suggestion)}
                         type="button"
                       >
-                        Übernehmen
+                        {suggestion.id ? "Akzeptieren" : "Übernehmen"}
                       </button>
                     </div>
                   ))}
@@ -570,6 +618,10 @@ export function EventSheet({
     </div>
   );
 }
+
+type SheetSuggestion = ScheduleSuggestion & {
+  id?: string;
+};
 
 function selectionFromTeamMembers(
   teamMembers: TeamMember[],

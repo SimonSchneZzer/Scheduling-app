@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: scheduling-app-postgres
+    environment:
+      POSTGRES_DB: scheduling_app
+      POSTGRES_USER: scheduling_app
+      POSTGRES_PASSWORD: scheduling_app
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scheduling_app -d scheduling_app"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "55432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

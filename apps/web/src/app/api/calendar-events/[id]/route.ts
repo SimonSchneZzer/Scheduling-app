@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { updateAcceptedCalendarEvent } from "@/db/scheduling-data";
+import {
+  CalendarEventValidationError,
+  updateAcceptedCalendarEvent,
+} from "@/db/scheduling-data";
 import type { UpdateCalendarEventRequest } from "@/scheduling";
 
 export async function PATCH(
@@ -38,6 +41,16 @@ export async function PATCH(
       end: event.end.toISOString(),
     });
   } catch (error) {
+    if (error instanceof CalendarEventValidationError) {
+      return NextResponse.json(
+        {
+          error: "Calendar event update violates scheduling constraints.",
+          reasons: error.reasons,
+        },
+        { status: 409 },
+      );
+    }
+
     console.error(error);
 
     return NextResponse.json(

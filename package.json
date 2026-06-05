@@ -6,9 +6,13 @@
   "scripts": {
     "dev": "pnpm --filter @scheduling-app/web dev",
     "build": "pnpm --filter @scheduling-app/web build",
+    "db:down": "docker compose down",
     "db:generate": "pnpm --filter @scheduling-app/web db:generate",
     "db:migrate": "pnpm --filter @scheduling-app/web db:migrate",
+    "db:reset": "pnpm --filter @scheduling-app/web db:reset",
     "db:seed": "pnpm --filter @scheduling-app/web db:seed",
+    "db:setup": "pnpm db:migrate && pnpm db:seed",
+    "db:up": "docker compose up -d postgres",
     "db:validate": "pnpm --filter @scheduling-app/web db:validate",
     "lint": "pnpm --filter @scheduling-app/web lint",
     "test": "pnpm --filter @scheduling-app/web test",

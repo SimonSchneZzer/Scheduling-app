@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  deserializeScheduleRunResponse,
   deserializeSchedulingData,
+  serializeScheduleRunResponse,
   serializeSchedulingData,
 } from "./api-types";
-import type { SchedulingData } from "./api-types";
+import type { ScheduleRunResponse, SchedulingData } from "./api-types";
 
 describe("scheduling API serialization", () => {
   it("serializes Date values into JSON-safe strings", () => {
@@ -32,6 +34,38 @@ describe("scheduling API serialization", () => {
     ).toBeInstanceOf(Date);
     expect(deserialized.rooms[0]?.availability[0]?.end).toBeInstanceOf(Date);
     expect(deserialized.calendarEvents[0]?.start).toBeInstanceOf(Date);
+  });
+
+  it("serializes and deserializes stored schedule run suggestions", () => {
+    const response: ScheduleRunResponse = {
+      eventRequestId: "request-1",
+      scheduleRunId: "run-1",
+      suggestions: [
+        {
+          id: "suggestion-1",
+          start: new Date("2026-06-08T10:00:00.000Z"),
+          end: new Date("2026-06-08T10:45:00.000Z"),
+          score: 65,
+          explanations: ["2 required participants available"],
+          assignedResource: {
+            id: "room-a",
+            name: "Room A",
+            capacity: 8,
+            features: ["whiteboard"],
+            availability: [],
+          },
+        },
+      ],
+    };
+
+    const serialized = serializeScheduleRunResponse(response);
+    const deserialized = deserializeScheduleRunResponse(serialized);
+
+    expect(serialized.suggestions[0]?.start).toBe(
+      "2026-06-08T10:00:00.000Z",
+    );
+    expect(deserialized.suggestions[0]?.start).toBeInstanceOf(Date);
+    expect(deserialized.suggestions[0]?.id).toBe("suggestion-1");
   });
 });
 

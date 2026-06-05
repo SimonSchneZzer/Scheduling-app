@@ -1,8 +1,10 @@
 import type {
   CalendarEvent,
+  EventRequest,
   ParticipantAvailability,
   ParticipantRole,
   RoomResource,
+  ScheduleSuggestion,
 } from "./types";
 
 export type TeamMember = {
@@ -37,11 +39,41 @@ export type SerializedRoomResource = Omit<RoomResource, "availability"> & {
   availability: SerializedTimeWindow[];
 };
 
+export type StoredScheduleSuggestion = ScheduleSuggestion & {
+  id: string;
+};
+
+export type SerializedStoredScheduleSuggestion = Omit<
+  StoredScheduleSuggestion,
+  "start" | "end"
+> & {
+  start: string;
+  end: string;
+};
+
 export type SerializedSchedulingData = {
   teamMembers: TeamMember[];
   participantAvailability: SerializedParticipantAvailability[];
   rooms: SerializedRoomResource[];
   calendarEvents: SerializedCalendarEvent[];
+};
+
+export type CreateScheduleRunRequest = {
+  title: string;
+  eventRequest: EventRequest;
+};
+
+export type ScheduleRunResponse = {
+  eventRequestId: string;
+  scheduleRunId: string;
+  suggestions: StoredScheduleSuggestion[];
+};
+
+export type SerializedScheduleRunResponse = Omit<
+  ScheduleRunResponse,
+  "suggestions"
+> & {
+  suggestions: SerializedStoredScheduleSuggestion[];
 };
 
 export type AcceptSuggestionRequest = {
@@ -98,6 +130,32 @@ export function deserializeSchedulingData(
       ...event,
       start: new Date(event.start),
       end: new Date(event.end),
+    })),
+  };
+}
+
+export function serializeScheduleRunResponse(
+  response: ScheduleRunResponse,
+): SerializedScheduleRunResponse {
+  return {
+    ...response,
+    suggestions: response.suggestions.map((suggestion) => ({
+      ...suggestion,
+      start: suggestion.start.toISOString(),
+      end: suggestion.end.toISOString(),
+    })),
+  };
+}
+
+export function deserializeScheduleRunResponse(
+  response: SerializedScheduleRunResponse,
+): ScheduleRunResponse {
+  return {
+    ...response,
+    suggestions: response.suggestions.map((suggestion) => ({
+      ...suggestion,
+      start: new Date(suggestion.start),
+      end: new Date(suggestion.end),
     })),
   };
 }
