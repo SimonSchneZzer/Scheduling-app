@@ -49,7 +49,6 @@ export function SchedulingDashboard() {
     "loading",
   );
   const [dataError, setDataError] = useState<string | null>(null);
-  const [isResetting, setIsResetting] = useState(false);
   const [persistedAcceptedEvents, setPersistedAcceptedEvents] = useState<
     CalendarEvent[]
   >([]);
@@ -430,40 +429,6 @@ export function SchedulingDashboard() {
     }
   }
 
-  async function resetDemoData() {
-    setIsResetting(true);
-    setDataError(null);
-
-    if (dataSource === "database") {
-      try {
-        const response = await fetch("/api/scheduling-data", {
-          method: "DELETE",
-        });
-
-        if (!response.ok) {
-          throw new Error("Database reset failed.");
-        }
-
-        const payload = (await response.json()) as SerializedSchedulingData;
-        setSchedulingData(deserializeSchedulingData(payload));
-        void refreshScheduleRunHistory();
-      } catch {
-        setDataError("Could not reset accepted PostgreSQL events.");
-      } finally {
-        setIsResetting(false);
-      }
-
-      return;
-    }
-
-    try {
-      setPersistedAcceptedEvents([]);
-      window.localStorage.removeItem(acceptedEventsStorageKey);
-    } finally {
-      setIsResetting(false);
-    }
-  }
-
   return (
     <main className="min-h-screen bg-[#f6f7f9] text-[#1d2430]">
       <header className="border-b border-[#d9dee7] bg-white">
@@ -478,15 +443,7 @@ export function SchedulingDashboard() {
               onClick={openSheetForNew}
               type="button"
             >
-              Termin hinzufügen
-            </button>
-            <button
-              className="h-10 rounded-md border border-[#cfd6e0] bg-white px-4 text-sm font-semibold text-[#253247]"
-              disabled={isResetting}
-              onClick={resetDemoData}
-              type="button"
-            >
-              {isResetting ? "Resetting" : "Reset demo data"}
+              Add event
             </button>
           </div>
         </div>

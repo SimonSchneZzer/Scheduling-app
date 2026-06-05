@@ -435,17 +435,6 @@ export async function deleteAcceptedCalendarEvent(
   };
 }
 
-export async function deleteAcceptedCalendarEvents() {
-  const prisma = getPrismaClient();
-
-  await prisma.calendarEvent.deleteMany({
-    where: {
-      calendarId: DEMO_CALENDAR_ID,
-      source: "ACCEPTED",
-    },
-  });
-}
-
 function groupAvailabilityWindows(
   windows: Array<{ userId: string; start: Date; end: Date }>,
 ): ParticipantAvailability[] {
