@@ -95,6 +95,7 @@ export type SerializedScheduleRunHistoryItem = Omit<
 
 export type AcceptSuggestionRequest = {
   title: string;
+  description?: string;
   participantIds: string[];
   participantRoles?: Record<string, ParticipantRole>;
   resourceId?: string;
@@ -107,6 +108,7 @@ export type UpdateCalendarEventRequest = {
   end: string;
   resourceId?: string | null;
   title?: string;
+  description?: string | null;
 };
 
 export function serializeSchedulingData(

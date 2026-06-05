@@ -12,7 +12,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CalendarEvent, RoomResource, TeamMember } from "@/scheduling";
 import { AllDayLane } from "./all-day-lane";
 import { CalendarHeader } from "./calendar-header";
-import { EventDetails } from "./event-details";
 import { TimeGrid } from "./time-grid";
 import { DAY_MIN_PX, GUTTER_PX } from "./lib/dimensions";
 import { formatWeekday, formatWeekRangeLabel } from "./lib/format";
@@ -26,10 +25,6 @@ import { addDays, isSameDay, startOfDay, weekDays } from "./lib/range";
 
 const DAYS_PER_WEEK = 7;
 const NOW_REFRESH_MS = 60_000;
-type SelectedEvent = {
-  event: CalendarEvent;
-  rect: DOMRect;
-};
 
 export type CalendarMovePayload = {
   event: CalendarEvent;
@@ -50,9 +45,11 @@ type CalendarViewProps = {
   teamMembers: TeamMember[];
   /** Week to open on; defaults to the current week. */
   initialDate?: Date;
+  /** Id of the event currently open in the sheet, highlighted in the grid. */
+  activeEventId?: string | null;
   onEventMove?: (payload: CalendarMovePayload) => void;
   onEventResize?: (payload: CalendarResizePayload) => void;
-  onEventDelete?: (event: CalendarEvent) => void;
+  onEventOpen?: (event: CalendarEvent) => void;
   onRangeCreate?: (range: { start: Date; end: Date }) => void;
 };
 
@@ -62,9 +59,10 @@ export function CalendarView({
   rooms,
   teamMembers,
   initialDate,
+  activeEventId,
   onEventMove,
   onEventResize,
-  onEventDelete,
+  onEventOpen,
   onRangeCreate,
 }: CalendarViewProps) {
   const [anchorDate, setAnchorDate] = useState<Date>(
@@ -74,13 +72,16 @@ export function CalendarView({
   const [participantFilter, setParticipantFilter] = useState("");
   const [roomFilter, setRoomFilter] = useState("");
   const [now, setNow] = useState<Date | null>(null);
-  const [selected, setSelected] = useState<SelectedEvent | null>(null);
 
-  const selectEvent = useCallback((event: CalendarEvent, rect: DOMRect) => {
-    setSelected({ event, rect });
-  }, []);
-
-  const clearSelection = useCallback(() => setSelected(null), []);
+  const handleEventClick = useCallback(
+    (event: CalendarEvent) => {
+      if (event.preview) {
+        return;
+      }
+      onEventOpen?.(event);
+    },
+    [onEventOpen],
+  );
 
   useEffect(() => {
     const update = () => setNow(new Date());
@@ -179,7 +180,6 @@ export function CalendarView({
     if (!calendarEvent) {
       return;
     }
-    clearSelection();
     beginMove(calendarEvent);
   }
 
@@ -296,24 +296,20 @@ export function CalendarView({
         participantFilter={participantFilter}
         participantOptions={teamMembers}
         onNext={() => {
-          clearSelection();
           cancel();
           setAnchorDate((current) => addDays(current, navStepDays));
         }}
         onPrev={() => {
-          clearSelection();
           cancel();
           setAnchorDate((current) => addDays(current, -navStepDays));
         }}
         onParticipantFilterChange={setParticipantFilter}
         onRoomFilterChange={setRoomFilter}
         onToday={() => {
-          clearSelection();
           cancel();
           setAnchorDate(startOfDay(now ?? new Date()));
         }}
         onViewModeChange={(mode) => {
-          clearSelection();
           cancel();
           setViewMode(mode);
           setAnchorDate((current) =>
@@ -372,8 +368,8 @@ export function CalendarView({
             <AllDayLane
               allDayEvents={allDay}
               onResize={handleAllDayResize}
-              onSelect={selectEvent}
-              selectedEventId={selected?.event.id ?? null}
+              onSelect={handleEventClick}
+              selectedEventId={activeEventId ?? null}
               weekDays={days}
             />
 
@@ -381,9 +377,9 @@ export function CalendarView({
               <TimeGrid
                 endHour={endHour}
                 now={now}
-                onSelectEvent={selectEvent}
+                onSelectEvent={handleEventClick}
                 rooms={rooms}
-                selectedEventId={selected?.event.id ?? null}
+                selectedEventId={activeEventId ?? null}
                 startHour={startHour}
                 timedEvents={timed}
                 weekDays={days}
@@ -400,7 +396,7 @@ export function CalendarView({
               {visibleEvents.length === 0 && interaction.kind === "idle" ? (
                 <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
                   <p className="rounded-md bg-white/80 px-3 py-1.5 text-sm text-[#9aa4b2]">
-                    Keine Termine in dieser Ansicht.
+                    No events in this view.
                   </p>
                 </div>
               ) : null}
@@ -425,19 +421,6 @@ export function CalendarView({
         </span>
       </div>
 
-      {selected ? (
-        <EventDetails
-          anchorRect={selected.rect}
-          event={selected.event}
-          onClose={clearSelection}
-          onDelete={(event) => {
-            clearSelection();
-            onEventDelete?.(event);
-          }}
-          rooms={rooms}
-          teamMembers={teamMembers}
-        />
-      ) : null}
     </section>
   );
 }

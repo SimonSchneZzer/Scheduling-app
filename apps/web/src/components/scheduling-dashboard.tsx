@@ -7,7 +7,10 @@ import type {
   CalendarMovePayload,
   CalendarResizePayload,
 } from "@/components/calendar/calendar-view";
-import { EventSheet } from "@/components/calendar/event-sheet";
+import {
+  EventSheet,
+  type EventDraftPreview,
+} from "@/components/calendar/event-sheet";
 import {
   deserializeScheduleRunHistory,
   deserializeScheduleRunResponse,
@@ -57,6 +60,11 @@ export function SchedulingDashboard() {
   const [sheetInitialRange, setSheetInitialRange] = useState<
     { start: Date; end: Date } | undefined
   >(undefined);
+  const [sheetEditEvent, setSheetEditEvent] = useState<CalendarEvent | null>(
+    null,
+  );
+  const [draftPreviewEvent, setDraftPreviewEvent] =
+    useState<CalendarEvent | null>(null);
   const [pendingSuggestionEvents, setPendingSuggestionEvents] = useState<
     CalendarEvent[]
   >([]);
@@ -156,21 +164,50 @@ export function SchedulingDashboard() {
   }, [dataSource, localStorageLoaded, persistedAcceptedEvents]);
 
   const openSheetForNew = useCallback(() => {
+    setSheetEditEvent(null);
     setSheetInitialRange(createDefaultEventRange());
     setSheetOpen(true);
   }, []);
 
   const handleRangeCreate = useCallback(
     (range: { start: Date; end: Date }) => {
+      setSheetEditEvent(null);
       setSheetInitialRange(range);
       setSheetOpen(true);
     },
     [],
   );
 
+  const openSheetForEvent = useCallback((event: CalendarEvent) => {
+    setSheetEditEvent(event);
+    setSheetInitialRange(undefined);
+    setSheetOpen(true);
+  }, []);
+
+  // Stable identity: the sheet's draft-preview effect depends on this, so an
+  // inline function would re-run the effect every render and loop.
+  const handleDraftChange = useCallback((draft: EventDraftPreview | null) => {
+    setDraftPreviewEvent(
+      draft
+        ? {
+            id: draft.id,
+            title: draft.title,
+            source: "accepted",
+            preview: true,
+            participantIds: [],
+            resourceId: draft.resourceId,
+            start: draft.start,
+            end: draft.end,
+          }
+        : null,
+    );
+  }, []);
+
   const closeSheet = useCallback(() => {
     setSheetOpen(false);
     setSheetInitialRange(undefined);
+    setSheetEditEvent(null);
+    setDraftPreviewEvent(null);
     setPendingSuggestionEvents([]);
   }, []);
 
@@ -218,6 +255,7 @@ export function SchedulingDashboard() {
     const acceptedEvent: CalendarEvent = {
       id: `accepted-${request.start}-${persistedAcceptedEvents.length + 1}`,
       title: request.title,
+      description: request.description,
       source: "accepted",
       participantIds: request.participantIds,
       resourceId: request.resourceId,
@@ -337,6 +375,10 @@ export function SchedulingDashboard() {
           ? target.resourceId
           : patch.resourceId ?? undefined,
       title: patch.title ?? target.title,
+      description:
+        patch.description === undefined
+          ? target.description
+          : patch.description ?? undefined,
     };
 
     setPersistedAcceptedEvents((events) => {
@@ -461,12 +503,17 @@ export function SchedulingDashboard() {
         <CalendarView
           events={acceptedEvents}
           initialDate={initialAnchorDate}
-          suggestionEvents={pendingSuggestionEvents}
+          activeEventId={sheetEditEvent?.id ?? null}
+          suggestionEvents={
+            draftPreviewEvent
+              ? [...pendingSuggestionEvents, draftPreviewEvent]
+              : pendingSuggestionEvents
+          }
           rooms={rooms}
           teamMembers={teamMembers}
           onEventMove={handleEventMove}
           onEventResize={handleEventResize}
-          onEventDelete={deleteEvent}
+          onEventOpen={openSheetForEvent}
           onRangeCreate={handleRangeCreate}
         />
 
@@ -478,6 +525,7 @@ export function SchedulingDashboard() {
 
       {sheetOpen ? (
         <EventSheet
+          event={sheetEditEvent ?? undefined}
           existingEvents={acceptedEvents}
           initialRange={sheetInitialRange}
           onClose={closeSheet}
@@ -489,6 +537,17 @@ export function SchedulingDashboard() {
           }
           onSuggestionsPreview={previewSuggestions}
           onSubmit={submitNewEvent}
+          onUpdate={async (id, patch) => {
+            const target =
+              sheetEditEvent ??
+              acceptedEvents.find((candidate) => candidate.id === id);
+            if (!target) {
+              return;
+            }
+            await persistEventUpdate(target, patch);
+          }}
+          onDelete={deleteEvent}
+          onDraftChange={handleDraftChange}
           participantAvailability={participantAvailability}
           rooms={rooms}
           teamMembers={teamMembers}
