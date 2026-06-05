@@ -3,7 +3,7 @@ import {
   CalendarEventValidationError,
   createAcceptedCalendarEvent,
 } from "@/db/scheduling-data";
-import type { AcceptSuggestionRequest, ParticipantRole } from "@/scheduling";
+import { isAcceptSuggestionRequest } from "@/scheduling";
 
 export async function POST(request: Request) {
   let payload: unknown;
@@ -47,50 +47,4 @@ export async function POST(request: Request) {
       { status: 503 },
     );
   }
-}
-
-function isAcceptSuggestionRequest(
-  value: unknown,
-): value is AcceptSuggestionRequest {
-  if (!isRecord(value)) {
-    return false;
-  }
-
-  return (
-    typeof value.title === "string" &&
-    value.title.trim().length > 0 &&
-    Array.isArray(value.participantIds) &&
-    value.participantIds.every((participantId) => typeof participantId === "string") &&
-    (value.resourceId === undefined || typeof value.resourceId === "string") &&
-    typeof value.start === "string" &&
-    isValidDate(value.start) &&
-    typeof value.end === "string" &&
-    isValidDate(value.end) &&
-    new Date(value.start) < new Date(value.end) &&
-    isParticipantRoleMap(value.participantRoles)
-  );
-}
-
-function isParticipantRoleMap(value: unknown) {
-  if (value === undefined) {
-    return true;
-  }
-
-  if (!isRecord(value)) {
-    return false;
-  }
-
-  return Object.values(value).every(isParticipantRole);
-}
-
-function isParticipantRole(value: unknown): value is ParticipantRole {
-  return value === "required" || value === "optional";
-}
-
-function isValidDate(value: string) {
-  return !Number.isNaN(new Date(value).getTime());
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
 }

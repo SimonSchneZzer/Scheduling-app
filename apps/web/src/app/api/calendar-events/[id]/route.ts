@@ -4,7 +4,7 @@ import {
   deleteAcceptedCalendarEvent,
   updateAcceptedCalendarEvent,
 } from "@/db/scheduling-data";
-import type { UpdateCalendarEventRequest } from "@/scheduling";
+import { isUpdateCalendarEventRequest } from "@/scheduling";
 
 export async function PATCH(
   request: Request,
@@ -90,32 +90,4 @@ export async function DELETE(
       { status: 503 },
     );
   }
-}
-
-function isUpdateCalendarEventRequest(
-  value: unknown,
-): value is UpdateCalendarEventRequest {
-  if (!isRecord(value)) {
-    return false;
-  }
-
-  return (
-    typeof value.start === "string" &&
-    isValidDate(value.start) &&
-    typeof value.end === "string" &&
-    isValidDate(value.end) &&
-    new Date(value.start) < new Date(value.end) &&
-    (value.resourceId === undefined ||
-      value.resourceId === null ||
-      typeof value.resourceId === "string") &&
-    (value.title === undefined || typeof value.title === "string")
-  );
-}
-
-function isValidDate(value: string) {
-  return !Number.isNaN(new Date(value).getTime());
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
 }
