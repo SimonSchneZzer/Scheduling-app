@@ -7,6 +7,9 @@ export {
   isAcceptSuggestionRequest,
   isUpdateCalendarEventRequest,
   parseCreateScheduleRunRequest,
+  parseFeatureInput,
+  parseParticipantInput,
+  parseRoomInput,
 } from "./request-validation";
 export {
   deserializeScheduleRunHistory,
@@ -33,6 +36,15 @@ export type {
   ScheduleSuggestion,
   TimeWindow,
 } from "./types";
+export type {
+  FeatureInput,
+  ManagedFeature,
+  ManagedParticipant,
+  ManagedRoom,
+  ManagedWindow,
+  ParticipantInput,
+  RoomInput,
+} from "./management-types";
 export type {
   AcceptSuggestionRequest,
   CreateScheduleRunRequest,

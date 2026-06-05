@@ -17,7 +17,6 @@ import type {
   ParticipantAvailability,
   ParticipantRole,
   Priority,
-  ResourceFeature,
   RoomResource,
 } from "@/scheduling";
 
@@ -93,7 +92,7 @@ export async function loadSchedulingData(): Promise<SchedulingData> {
       id: room.id,
       name: room.name,
       capacity: room.capacity,
-      features: room.features.map((feature) => feature.featureId as ResourceFeature),
+      features: room.features.map((feature) => feature.featureId),
       availability: room.availabilityWindows.map((availability) => ({
         start: availability.start,
         end: availability.end,

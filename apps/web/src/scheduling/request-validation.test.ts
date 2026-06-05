@@ -3,6 +3,9 @@ import {
   isAcceptSuggestionRequest,
   isUpdateCalendarEventRequest,
   parseCreateScheduleRunRequest,
+  parseFeatureInput,
+  parseParticipantInput,
+  parseRoomInput,
 } from "./request-validation";
 
 describe("isAcceptSuggestionRequest", () => {
@@ -195,5 +198,70 @@ describe("parseCreateScheduleRunRequest", () => {
         },
       }),
     ).toBeNull();
+  });
+});
+
+describe("parseParticipantInput", () => {
+  it("parses a valid participant with availability", () => {
+    const result = parseParticipantInput({
+      name: "Mara",
+      defaultRole: "required",
+      availability: [
+        { start: "2026-06-08T09:00:00.000Z", end: "2026-06-08T17:00:00.000Z" },
+      ],
+    });
+    expect(result).not.toBeNull();
+    expect(result?.availability).toHaveLength(1);
+  });
+
+  it("defaults availability to an empty list when omitted", () => {
+    const result = parseParticipantInput({ name: "Lea", defaultRole: "optional" });
+    expect(result?.availability).toEqual([]);
+  });
+
+  it("rejects a blank name, unknown role, or inverted window", () => {
+    expect(
+      parseParticipantInput({ name: "  ", defaultRole: "required" }),
+    ).toBeNull();
+    expect(parseParticipantInput({ name: "X", defaultRole: "boss" })).toBeNull();
+    expect(
+      parseParticipantInput({
+        name: "X",
+        defaultRole: "required",
+        availability: [{ start: "2026-06-08T17:00:00.000Z", end: "2026-06-08T09:00:00.000Z" }],
+      }),
+    ).toBeNull();
+  });
+});
+
+describe("parseRoomInput", () => {
+  it("parses a valid room and floors capacity", () => {
+    const result = parseRoomInput({
+      name: "Room A",
+      capacity: 8.6,
+      featureIds: ["whiteboard"],
+      availability: [],
+    });
+    expect(result?.capacity).toBe(8);
+    expect(result?.featureIds).toEqual(["whiteboard"]);
+  });
+
+  it("rejects negative capacity or non-string feature ids", () => {
+    expect(
+      parseRoomInput({ name: "R", capacity: -1, featureIds: [] }),
+    ).toBeNull();
+    expect(
+      parseRoomInput({ name: "R", capacity: 4, featureIds: [7] }),
+    ).toBeNull();
+  });
+});
+
+describe("parseFeatureInput", () => {
+  it("accepts a non-empty label and rejects a blank one", () => {
+    expect(parseFeatureInput({ label: "Projector" })).toEqual({
+      label: "Projector",
+    });
+    expect(parseFeatureInput({ label: "   " })).toBeNull();
+    expect(parseFeatureInput({})).toBeNull();
   });
 });

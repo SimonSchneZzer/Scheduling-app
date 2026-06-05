@@ -35,7 +35,6 @@ export type EventDraftPreview = {
 
 const eventTypeOptions: EventType[] = ["timed", "all-day"];
 const priorityOptions: Priority[] = ["low", "medium", "high", "urgent"];
-const featureOptions: ResourceFeature[] = ["whiteboard", "screen", "video"];
 
 const DRAFT_PREVIEW_ID = "draft-preview";
 /** Keep in sync with the `duration-200` transition on the sheet/backdrop. */
@@ -170,6 +169,13 @@ export function EventSheet({
       })
       .filter((participant): participant is Participant => participant !== null);
   }, [participantSelection, teamMembers]);
+
+  // Feature options come from whatever the managed rooms expose.
+  const featureOptions = useMemo<ResourceFeature[]>(() => {
+    const unique = new Set<string>();
+    rooms.forEach((room) => room.features.forEach((feature) => unique.add(feature)));
+    return [...unique].sort();
+  }, [rooms]);
 
   // Single source of truth for the create preview: whatever the form currently
   // describes is mirrored onto the grid as a preview block.
