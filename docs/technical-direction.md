@@ -6,7 +6,7 @@ Start with a TypeScript-first web application:
 - Frontend: Next.js
 - Backend: Next.js API routes for the MVP
 - Database: PostgreSQL
-- ORM: Prisma or Drizzle
+- ORM: Prisma
 - Styling: Tailwind CSS or a small component system
 - Tests: Vitest for business logic, Playwright later for key flows
 
@@ -30,6 +30,8 @@ docs/
 
 Current scaffold:
 - `apps/web` contains the Next.js App Router frontend.
+- `apps/web/prisma` contains the Prisma schema, migrations, and seed script.
+- `apps/web/src/db` contains server-side database helpers.
 - Root `package.json` contains workspace scripts.
 - Root `pnpm-workspace.yaml` defines app packages.
 - Vitest is installed for business-logic tests.
@@ -73,6 +75,8 @@ The engine should not:
 ## Data Storage Direction
 
 Use PostgreSQL because scheduling queries will likely need structured relations and time-based filtering.
+
+Use Prisma for the MVP ORM. See `docs/decisions/0002-prisma-persistence.md`.
 
 Likely core tables:
 - users

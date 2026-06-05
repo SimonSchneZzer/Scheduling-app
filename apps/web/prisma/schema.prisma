@@ -1,0 +1,332 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ParticipantRole {
+  REQUIRED @map("required")
+  OPTIONAL @map("optional")
+}
+
+enum Priority {
+  LOW    @map("low")
+  MEDIUM @map("medium")
+  HIGH   @map("high")
+  URGENT @map("urgent")
+}
+
+enum EventMode {
+  OFFLINE @map("offline")
+  ONLINE  @map("online")
+}
+
+enum EventType {
+  TIMED     @map("timed")
+  ALL_DAY   @map("all-day")
+  MULTI_DAY @map("multi-day")
+}
+
+enum CalendarEventSource {
+  SEED     @map("seed")
+  ACCEPTED @map("accepted")
+}
+
+enum ResourceKind {
+  DEVICE    @map("device")
+  EQUIPMENT @map("equipment")
+  VEHICLE   @map("vehicle")
+  OTHER     @map("other")
+}
+
+model User {
+  id                  String                     @id
+  name                String
+  email               String?                    @unique
+  createdAt           DateTime                   @default(now())
+  updatedAt           DateTime                   @updatedAt
+  teamMemberships     TeamMember[]
+  availabilityWindows AvailabilityWindow[]
+  eventParticipants   CalendarEventParticipant[]
+  requestParticipants EventRequestParticipant[]
+
+  @@map("users")
+}
+
+model Team {
+  id            String         @id
+  name          String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  members       TeamMember[]
+  calendars     Calendar[]
+  eventRequests EventRequest[]
+  rooms         Room[]
+  resources     Resource[]
+
+  @@map("teams")
+}
+
+model TeamMember {
+  id          String          @id @default(cuid())
+  teamId      String
+  userId      String
+  defaultRole ParticipantRole @default(OPTIONAL)
+  createdAt   DateTime        @default(now())
+  team        Team            @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, userId])
+  @@map("team_members")
+}
+
+model Calendar {
+  id        String          @id
+  teamId    String
+  name      String
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  team      Team            @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  events    CalendarEvent[]
+
+  @@map("calendars")
+}
+
+model CalendarEvent {
+  id             String                     @id
+  calendarId     String
+  title          String
+  source         CalendarEventSource
+  start          DateTime
+  end            DateTime
+  roomId         String?
+  eventRequestId String?
+  createdAt      DateTime                   @default(now())
+  updatedAt      DateTime                   @updatedAt
+  calendar       Calendar                   @relation(fields: [calendarId], references: [id], onDelete: Cascade)
+  room           Room?                      @relation(fields: [roomId], references: [id], onDelete: SetNull)
+  eventRequest   EventRequest?              @relation(fields: [eventRequestId], references: [id], onDelete: SetNull)
+  participants   CalendarEventParticipant[]
+  roomBookings   RoomBooking[]
+
+  @@index([calendarId, start, end])
+  @@index([roomId, start, end])
+  @@map("calendar_events")
+}
+
+model CalendarEventParticipant {
+  id              String          @id @default(cuid())
+  calendarEventId String
+  userId          String
+  role            ParticipantRole
+  calendarEvent   CalendarEvent   @relation(fields: [calendarEventId], references: [id], onDelete: Cascade)
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([calendarEventId, userId])
+  @@index([userId])
+  @@map("calendar_event_participants")
+}
+
+model AvailabilityWindow {
+  id        String   @id @default(cuid())
+  userId    String
+  start     DateTime
+  end       DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, start, end])
+  @@map("availability_windows")
+}
+
+model Room {
+  id                  String                   @id
+  teamId              String
+  name                String
+  capacity            Int
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  team                Team                     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  features            RoomFeatureOnRoom[]
+  availabilityWindows RoomAvailabilityWindow[]
+  events              CalendarEvent[]
+  bookings            RoomBooking[]
+  suggestions         ScheduleSuggestion[]
+
+  @@unique([teamId, name])
+  @@map("rooms")
+}
+
+model RoomFeature {
+  id              String                        @id
+  label           String
+  rooms           RoomFeatureOnRoom[]
+  requestFeatures EventRequestRequiredFeature[]
+
+  @@map("room_features")
+}
+
+model RoomFeatureOnRoom {
+  roomId    String
+  featureId String
+  room      Room        @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  feature   RoomFeature @relation(fields: [featureId], references: [id], onDelete: Cascade)
+
+  @@id([roomId, featureId])
+  @@map("room_features_on_rooms")
+}
+
+model RoomAvailabilityWindow {
+  id        String   @id @default(cuid())
+  roomId    String
+  start     DateTime
+  end       DateTime
+  createdAt DateTime @default(now())
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@index([roomId, start, end])
+  @@map("room_availability_windows")
+}
+
+model RoomBooking {
+  id              String        @id @default(cuid())
+  roomId          String
+  calendarEventId String
+  start           DateTime
+  end             DateTime
+  createdAt       DateTime      @default(now())
+  room            Room          @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  calendarEvent   CalendarEvent @relation(fields: [calendarEventId], references: [id], onDelete: Cascade)
+
+  @@index([roomId, start, end])
+  @@map("room_bookings")
+}
+
+model Resource {
+  id                  String                            @id
+  teamId              String
+  name                String
+  kind                ResourceKind
+  createdAt           DateTime                          @default(now())
+  updatedAt           DateTime                          @updatedAt
+  team                Team                              @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  availabilityWindows ResourceAvailabilityWindow[]
+  bookings            ResourceBooking[]
+  requirements        EventRequestResourceRequirement[]
+
+  @@unique([teamId, name])
+  @@map("resources")
+}
+
+model ResourceAvailabilityWindow {
+  id         String   @id @default(cuid())
+  resourceId String
+  start      DateTime
+  end        DateTime
+  createdAt  DateTime @default(now())
+  resource   Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@index([resourceId, start, end])
+  @@map("resource_availability_windows")
+}
+
+model ResourceBooking {
+  id         String   @id @default(cuid())
+  resourceId String
+  start      DateTime
+  end        DateTime
+  createdAt  DateTime @default(now())
+  resource   Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@index([resourceId, start, end])
+  @@map("resource_bookings")
+}
+
+model EventRequest {
+  id                   String                            @id
+  teamId               String
+  title                String
+  description          String?
+  eventType            EventType
+  durationMinutes      Int
+  durationDays         Int?
+  priority             Priority
+  mode                 EventMode
+  requiredSeats        Int                               @default(0)
+  searchStart          DateTime
+  searchEnd            DateTime
+  slotIncrementMinutes Int?
+  createdAt            DateTime                          @default(now())
+  updatedAt            DateTime                          @updatedAt
+  team                 Team                              @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  participants         EventRequestParticipant[]
+  requiredFeatures     EventRequestRequiredFeature[]
+  resourceRequirements EventRequestResourceRequirement[]
+  scheduleRuns         ScheduleRun[]
+  acceptedEvents       CalendarEvent[]
+
+  @@index([teamId, createdAt])
+  @@map("event_requests")
+}
+
+model EventRequestParticipant {
+  id             String          @id @default(cuid())
+  eventRequestId String
+  userId         String
+  role           ParticipantRole
+  eventRequest   EventRequest    @relation(fields: [eventRequestId], references: [id], onDelete: Cascade)
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([eventRequestId, userId])
+  @@map("event_request_participants")
+}
+
+model EventRequestRequiredFeature {
+  eventRequestId String
+  featureId      String
+  eventRequest   EventRequest @relation(fields: [eventRequestId], references: [id], onDelete: Cascade)
+  feature        RoomFeature  @relation(fields: [featureId], references: [id], onDelete: Cascade)
+
+  @@id([eventRequestId, featureId])
+  @@map("event_request_required_features")
+}
+
+model EventRequestResourceRequirement {
+  eventRequestId String
+  resourceId     String
+  eventRequest   EventRequest @relation(fields: [eventRequestId], references: [id], onDelete: Cascade)
+  resource       Resource     @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@id([eventRequestId, resourceId])
+  @@map("event_request_resource_requirements")
+}
+
+model ScheduleRun {
+  id             String               @id @default(cuid())
+  eventRequestId String
+  createdAt      DateTime             @default(now())
+  eventRequest   EventRequest         @relation(fields: [eventRequestId], references: [id], onDelete: Cascade)
+  suggestions    ScheduleSuggestion[]
+
+  @@index([eventRequestId, createdAt])
+  @@map("schedule_runs")
+}
+
+model ScheduleSuggestion {
+  id             String      @id @default(cuid())
+  scheduleRunId  String
+  start          DateTime
+  end            DateTime
+  score          Int
+  explanations   Json
+  assignedRoomId String?
+  createdAt      DateTime    @default(now())
+  scheduleRun    ScheduleRun @relation(fields: [scheduleRunId], references: [id], onDelete: Cascade)
+  assignedRoom   Room?       @relation(fields: [assignedRoomId], references: [id], onDelete: SetNull)
+
+  @@index([scheduleRunId, score])
+  @@map("schedule_suggestions")
+}

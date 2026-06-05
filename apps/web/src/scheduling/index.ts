@@ -3,6 +3,10 @@ export {
   deserializeAcceptedEvents,
   serializeAcceptedEvents,
 } from "./persistence";
+export {
+  deserializeSchedulingData,
+  serializeSchedulingData,
+} from "./api-types";
 export type {
   CalendarEvent,
   CalendarEventSource,
@@ -20,3 +24,11 @@ export type {
   ScheduleSuggestion,
   TimeWindow,
 } from "./types";
+export type {
+  AcceptSuggestionRequest,
+  SchedulingData,
+  SerializedCalendarEvent,
+  SerializedSchedulingData,
+  TeamMember,
+  UpdateCalendarEventRequest,
+} from "./api-types";

@@ -1,15 +1,5 @@
-import type {
-  CalendarEvent,
-  ParticipantAvailability,
-  ParticipantRole,
-  RoomResource,
-} from "./types";
-
-export type TeamMember = {
-  id: string;
-  name: string;
-  defaultRole: ParticipantRole;
-};
+import type { CalendarEvent, ParticipantAvailability, RoomResource } from "./types";
+import type { SchedulingData, TeamMember } from "./api-types";
 
 export const teamMembers: TeamMember[] = [
   { id: "mara", name: "Mara", defaultRole: "required" },
@@ -76,35 +66,62 @@ export const rooms: RoomResource[] = [
 ];
 
 export const initialCalendarEvents: CalendarEvent[] = [
-  {
-    id: "calendar-standup",
-    title: "Daily standup",
-    source: "seed",
-    participantIds: ["mara", "simon", "lea", "jonas"],
-    resourceId: "room-a",
-    start: new Date("2026-06-08T09:00:00"),
-    end: new Date("2026-06-08T09:30:00"),
-  },
-  {
-    id: "calendar-customer-call",
-    title: "Customer call",
-    source: "seed",
-    participantIds: ["simon"],
-    start: new Date("2026-06-08T11:00:00"),
-    end: new Date("2026-06-08T11:45:00"),
-  },
-  {
-    id: "calendar-design-review",
-    title: "Design review",
-    source: "seed",
-    participantIds: ["lea"],
-    start: new Date("2026-06-08T13:30:00"),
-    end: new Date("2026-06-08T14:30:00"),
-  },
+  // Monday
+  calendarEvent("calendar-standup", "Daily standup", "2026-06-08T09:00:00", "2026-06-08T09:30:00", ["mara", "simon", "lea", "jonas"], "room-a"),
+  calendarEvent("calendar-customer-call", "Customer call", "2026-06-08T11:00:00", "2026-06-08T11:45:00", ["simon"]),
+  calendarEvent("calendar-hiring-sync", "Hiring sync", "2026-06-08T11:15:00", "2026-06-08T12:00:00", ["mara", "jonas"], "room-b"),
+  calendarEvent("calendar-design-review", "Design review", "2026-06-08T13:30:00", "2026-06-08T14:30:00", ["lea"]),
+  calendarEvent("calendar-1on1", "1:1 Mara · Simon", "2026-06-08T15:00:00", "2026-06-08T15:30:00", ["mara", "simon"], "room-b"),
+
+  // Tuesday
+  calendarEvent("calendar-standup-tue", "Daily standup", "2026-06-09T09:00:00", "2026-06-09T09:30:00", ["mara", "simon", "lea", "jonas"], "room-a"),
+  calendarEvent("calendar-sprint-planning", "Sprint planning", "2026-06-09T10:00:00", "2026-06-09T11:30:00", ["mara", "simon", "lea", "jonas"], "workshop-room"),
+  calendarEvent("calendar-lunch-learn", "Lunch & learn", "2026-06-09T12:30:00", "2026-06-09T13:15:00", ["lea", "jonas"], "room-b"),
+  calendarEvent("calendar-design-critique", "Design critique", "2026-06-09T15:00:00", "2026-06-09T16:00:00", ["mara", "lea"], "room-a"),
+
+  // Wednesday (+ multi-day offsite spanning into Thursday)
+  calendarEvent("calendar-standup-wed", "Daily standup", "2026-06-10T09:00:00", "2026-06-10T09:30:00", ["mara", "simon", "lea", "jonas"], "room-a"),
+  calendarEvent("calendar-offsite", "Team offsite", "2026-06-10T00:00:00", "2026-06-12T00:00:00", ["mara", "simon", "lea", "jonas"], "workshop-room"),
+  calendarEvent("calendar-roadmap-sync", "Roadmap sync", "2026-06-10T14:00:00", "2026-06-10T15:00:00", ["mara", "simon"], "room-b"),
+
+  // Thursday
+  calendarEvent("calendar-standup-thu", "Daily standup", "2026-06-11T09:00:00", "2026-06-11T09:30:00", ["mara", "simon", "lea", "jonas"], "room-a"),
+  calendarEvent("calendar-customer-demo", "Customer demo", "2026-06-11T14:00:00", "2026-06-11T15:00:00", ["mara", "simon"], "room-b"),
+
+  // Friday
+  calendarEvent("calendar-standup-fri", "Daily standup", "2026-06-12T09:00:00", "2026-06-12T09:30:00", ["mara", "simon", "lea", "jonas"], "room-a"),
+  calendarEvent("calendar-focus-friday", "Focus Friday", "2026-06-12T00:00:00", "2026-06-13T00:00:00", ["mara", "simon", "lea", "jonas"]),
+  calendarEvent("calendar-retro", "Team retro", "2026-06-12T15:00:00", "2026-06-12T16:00:00", ["mara", "simon", "lea", "jonas"], "workshop-room"),
 ];
+
+export const mockSchedulingData: SchedulingData = {
+  teamMembers,
+  participantAvailability,
+  rooms,
+  calendarEvents: initialCalendarEvents,
+};
 
 function window(start: string, end: string) {
   return {
+    start: new Date(start),
+    end: new Date(end),
+  };
+}
+
+function calendarEvent(
+  id: string,
+  title: string,
+  start: string,
+  end: string,
+  participantIds: string[],
+  resourceId?: string,
+): CalendarEvent {
+  return {
+    id,
+    title,
+    source: "seed",
+    participantIds,
+    resourceId,
     start: new Date(start),
     end: new Date(end),
   };

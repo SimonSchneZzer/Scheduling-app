@@ -36,7 +36,9 @@ The initial algorithm should be a scoring engine:
 
 The project has a Next.js web app under `apps/web` with the first local core scheduling flow. Users can define timed, all-day, or multi-day event requests, calculate ranked slot suggestions from the scheduling engine, include room constraints for offline events, and accept a suggestion into local calendar state. Accepted events persist in browser local storage for the demo.
 
-Recommended next step: decide whether to add database persistence or all-day/multi-day scheduling first.
+Prisma has been selected for PostgreSQL persistence. The first database schema, migration, seed script, Prisma Client setup, and database-backed API flow are in place. The UI loads and persists through PostgreSQL when available, with local browser persistence as a demo fallback.
+
+Recommended next step: decide the local PostgreSQL workflow for contributors, then improve the calendar view with a denser day/week layout.
 
 ## Development
 
@@ -49,4 +51,8 @@ pnpm typecheck
 pnpm lint
 pnpm test
 pnpm build
+pnpm db:validate
+pnpm db:generate
+pnpm db:migrate
+pnpm db:seed
 ```

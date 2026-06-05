@@ -51,7 +51,10 @@ Current structure:
 - `package.json` - root workspace scripts
 - `pnpm-workspace.yaml` - pnpm workspace definition
 - `apps/web/` - Next.js web application
+- `apps/web/prisma/` - Prisma schema, migrations, and seed data
 - `apps/web/src/app/` - App Router UI entrypoint
+- `apps/web/src/app/api/` - App Router API routes for database-backed MVP flows
+- `apps/web/src/db/` - server-side database helpers
 - `docs/product-concept.md` - product concept, scheduling model, and MVP roadmap
 - `docs/technical-direction.md` - recommended technical stack and architecture direction
 - `docs/roadmap.md` - step-by-step implementation roadmap
@@ -71,6 +74,10 @@ Use pnpm from the repository root:
 - Typecheck: `pnpm typecheck`
 - Build: `pnpm build`
 - Lint: `pnpm lint`
+- Validate Prisma schema: `pnpm db:validate`
+- Generate Prisma Client: `pnpm db:generate`
+- Run database migrations: `pnpm db:migrate`
+- Seed local database: `pnpm db:seed`
 
 ## Coding Guidelines
 
@@ -106,7 +113,7 @@ Use this section for unresolved project decisions:
 - Frontend framework: Next.js
 - Backend framework: Next.js API routes for MVP, separate Node API later if needed
 - Database: recommended PostgreSQL
-- ORM: recommended Prisma or Drizzle, undecided
+- ORM: Prisma
 - Authentication: undecided
 - Deployment target: undecided
 - Calendar sync: not part of MVP, but design should allow Google Calendar and Microsoft Graph later

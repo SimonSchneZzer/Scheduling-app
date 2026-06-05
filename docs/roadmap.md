@@ -38,21 +38,34 @@ Completed:
 - Next.js app scaffolded in `apps/web`.
 - TypeScript, Tailwind, ESLint, and Vitest are configured.
 - Root workspace scripts are available.
+- ORM choice: Prisma.
 
 Remaining:
-- Decide ORM.
-- Add backend/database setup.
+- Decide local PostgreSQL workflow for contributors.
 - Add first scheduling-engine module and tests. Done in `docs/tasks/scheduling-engine-mvp.md`.
 
 ## Phase 2: Data Model
 
-Status: planned
+Status: in progress
 
 - Choose ORM.
 - Add PostgreSQL setup.
 - Model users, teams, calendars, events, event requests, participants, rooms, and resources.
 - Add migrations.
 - Add seed data for local development.
+
+Completed first persistence slice:
+- Prisma added as the ORM.
+- Initial PostgreSQL schema and migration added.
+- Seed data mirrors the current local demo team, availability, rooms, and calendar events.
+- Prisma Client generation and schema validation scripts are available.
+- API routes load scheduling data and persist accepted suggestions in PostgreSQL.
+- The UI uses PostgreSQL when configured and falls back to local demo persistence when unavailable.
+
+Remaining:
+- Decide local PostgreSQL workflow for contributors.
+- Add conflict-aware validation in the accept endpoint before writing calendar events.
+- Store event requests and schedule runs for accepted suggestions.
 
 ## Phase 3: Scheduling Engine MVP
 
@@ -92,8 +105,34 @@ Completed first slice:
 - Accepted suggestions persist in local browser storage.
 
 Interim persistence:
-- Accepted events persist in `localStorage` for the browser demo.
+- Accepted events persist in PostgreSQL when available.
+- Accepted events fall back to `localStorage` for the browser demo when PostgreSQL is unavailable.
 - Seed events and accepted events are separated by event source.
+
+Calendar view (first slice, see `docs/tasks/calendar-view.md`):
+- Replaced the sorted event list with a Monday-anchored week grid.
+- Timed events render as positioned, overlap-aware blocks; all-day and multi-day events render in a swimlane above the grid.
+- The visible hour window auto-expands to fit early or late events.
+- Previous/next/today navigation between weeks.
+- Current-time indicator and seed-vs-accepted color coding.
+- Pure layout/range helpers in `apps/web/src/components/calendar/lib` with unit tests.
+- Event details popover on click (title, source, time, room + capacity, participants).
+
+Calendar interactions + add-event sheet:
+- Drag accepted events between days/times via dnd-kit, snapped to 15 minutes.
+- Resize accepted events by dragging the bottom edge (pointer events, 15-min snap).
+- Press-and-drag on an empty grid cell selects a range that opens the add-event sheet pre-filled.
+- Header CTA "Termin hinzufügen" opens a right-side sheet with the full event-request form.
+- Inside the sheet, a collapsible "Besten Slot finden" section runs the scoring engine and applies a ranked suggestion's time/room back into the form.
+- Move and resize persist via a new `PATCH /api/calendar-events/[id]` route, with localStorage fallback for the demo.
+- Conflict warning during drag/resize highlights overlaps with the event's own participants — drop is still allowed.
+
+Remaining for the calendar UI:
+- Day-view toggle alongside the week view.
+- Filter the grid by room or participant.
+- Render pending suggestions on the grid before accepting.
+- Delete events from the calendar UI.
+- Drag and resize for all-day / multi-day events.
 
 ## Phase 5: Resources And Long Events
 
